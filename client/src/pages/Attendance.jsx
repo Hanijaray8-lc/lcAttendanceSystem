@@ -339,13 +339,8 @@ export const Attendance = () => {
   const isLogActiveSession = (log) => {
     if (!log || !log.clockIn || log.isSyntheticAbsent || log.status === 'ABSENT' || log.status === 'WEEK_OFF') return false;
     
-    // Check if the log belongs to today
-    const logDateStr = getLocalDateString(log.clockIn || log.date);
-    const todayStr = getLocalDateString(new Date());
-    const isTodayDoc = logDateStr === todayStr;
-
-    // If clockOut is missing or undefined for today's record, it is definitely an active session!
-    if (isTodayDoc && !log.clockOut) return true;
+    // If clockOut is missing or undefined, it is an active session!
+    if (!log.clockOut) return true;
 
     // Otherwise check timeline's latest event
     const timeline = getDetailLogTimeline(log);
@@ -655,6 +650,20 @@ export const Attendance = () => {
       else if (log.status === 'ABSENT') { stats.absentCount++; }
       else { stats.presentCount++; }
     });
+
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === reportMonth && today.getFullYear() === reportYear;
+    const lastDayToCount = isCurrentMonth ? today.getDate() : new Date(reportYear, reportMonth + 1, 0).getDate();
+    let workingDays = 0;
+    for (let day = 1; day <= lastDayToCount; day++) {
+      const d = new Date(reportYear, reportMonth, day);
+      if (d.getDay() !== 0) workingDays++;
+    }
+
+    if (stats.absentCount === 0 && workingDays > stats.presentCount) {
+      stats.absentCount = Math.max(0, workingDays - stats.presentCount);
+    }
+
     return stats;
   };
 
@@ -1431,15 +1440,15 @@ export const Attendance = () => {
                     </div>
                   </div>
 
-                  {/* On Leave / Absent Stat */}
+                  {/* WFH / Remote Stat */}
                   <div className="bg-[#eff6ff] dark:bg-blue-950/30 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between space-y-2">
-                    <UserCheck className="w-5 h-5 text-[#2563eb] dark:text-blue-400 stroke-[2.2]" />
+                    <Home className="w-5 h-5 text-[#2563eb] dark:text-blue-400 stroke-[2.2]" />
                     <div>
                       <span className="text-xl sm:text-2xl font-black text-[#2563eb] dark:text-blue-400 block leading-none">
                         {empGroup.wfhCount || 0}
                       </span>
                       <span className="text-[11px] font-bold text-[#2563eb] dark:text-blue-400/90 block mt-1">
-                        On Leave
+                        WFH
                       </span>
                     </div>
                   </div>

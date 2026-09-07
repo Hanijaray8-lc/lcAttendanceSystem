@@ -155,12 +155,18 @@ export const clockIn = asyncHandler(async (req, res, next) => {
       // Ensure the checkout event is preserved in timeline array before resetting clockOut
       if (!existingAttendance.timeline) existingAttendance.timeline = [];
       const isForce = existingAttendance.notes?.includes('Force checked out');
-      existingAttendance.timeline.push({
-        type: isForce ? 'FORCE_CHECKOUT' : 'CLOCK_OUT',
-        timestamp: existingAttendance.clockOut,
-        workLocation: existingAttendance.workLocation,
-        note: isForce ? existingAttendance.notes : undefined
-      });
+      const hasCheckoutInTimeline = existingAttendance.timeline.some(
+        (t) => (t.type === 'CLOCK_OUT' || t.type === 'FORCE_CHECKOUT') &&
+               new Date(t.timestamp).getTime() === new Date(existingAttendance.clockOut).getTime()
+      );
+      if (!hasCheckoutInTimeline) {
+        existingAttendance.timeline.push({
+          type: isForce ? 'FORCE_CHECKOUT' : 'CLOCK_OUT',
+          timestamp: existingAttendance.clockOut,
+          workLocation: existingAttendance.workLocation,
+          note: isForce ? existingAttendance.notes : undefined
+        });
+      }
       existingAttendance.markModified('timeline');
       if (existingAttendance.lunchOut && !existingAttendance.lunchIn) {
         existingAttendance.lunchIn = now;
@@ -243,7 +249,8 @@ export const clockIn = asyncHandler(async (req, res, next) => {
 
           if (!duplicateDoc.timeline) duplicateDoc.timeline = [];
           const hasCheckoutInTimeline = duplicateDoc.timeline.some(
-            (t) => t.type === 'CLOCK_OUT' || t.type === 'FORCE_CHECKOUT'
+            (t) => (t.type === 'CLOCK_OUT' || t.type === 'FORCE_CHECKOUT') &&
+                   new Date(t.timestamp).getTime() === new Date(duplicateDoc.clockOut).getTime()
           );
           if (!hasCheckoutInTimeline) {
             const isForce = duplicateDoc.notes?.includes('Force checked out');
@@ -316,7 +323,7 @@ export const lunchOut = asyncHandler(async (req, res, next) => {
   }
 
   const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
 
   if (!attendance) {
     return next(new AppError('No clock-in record found for today.', 404));
@@ -358,7 +365,7 @@ export const lunchIn = asyncHandler(async (req, res, next) => {
   }
 
   const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
 
   if (!attendance) {
     return next(new AppError('No clock-in record found for today.', 404));
@@ -404,7 +411,7 @@ export const clockOut = asyncHandler(async (req, res, next) => {
   }
 
   const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
 
   if (!attendance) {
     return next(new AppError('No clock-in record found for today.', 404));
@@ -459,7 +466,7 @@ export const getTodayAttendance = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
 
   const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
 
   if (attendance && attendance.clockIn && !attendance.clockOut && attendance.status === 'HALF_DAY') {
     const firstClockInIST = getISTTime(new Date(attendance.clockIn));
@@ -611,12 +618,19 @@ export const getLiveStatus = asyncHandler(async (req, res, next) => {
               $expr: {
                 $and: [
                   { $eq: ['$user', '$$userId'] },
-                  { $gte: ['$date', todayStart] },
-                  { $lte: ['$date', todayEnd] }
+                  {
+                    $or: [
+                      { $and: [{ $gte: ['$date', todayStart] }, { $lte: ['$date', todayEnd] }] },
+                      { $eq: ['$clockOut', null] },
+                      { $eq: ['$clockOut', '$$REMOVE'] }
+                    ]
+                  }
                 ]
               }
             }
-          }
+          },
+          { $sort: { date: -1, createdAt: -1 } },
+          { $limit: 1 }
         ],
         as: 'attendanceArray'
       }
@@ -784,10 +798,8 @@ export const forceCheckOut = asyncHandler(async (req, res, next) => {
     }
   }
 
-  const attendance = await Attendance.findOne({
-    user: userId,
-    date: { $gte: start, $lte: end }
-  });
+  const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
+  const attendance = (latest && (!latest.clockOut || (latest.date >= start && latest.date <= end))) ? latest : null;
   if (!attendance) {
     return next(new AppError('No check-in record found for this employee today.', 404));
   }
