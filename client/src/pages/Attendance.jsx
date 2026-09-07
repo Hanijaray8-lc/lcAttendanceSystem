@@ -279,10 +279,19 @@ export const Attendance = () => {
 
     if (log.notes && typeof log.notes === 'string') {
       const parts = log.notes.split('|');
-      parts.forEach((part) => {
+      parts.forEach((part, index) => {
         const trimmed = part.trim();
         if (trimmed.includes('Force checked out')) {
-          const parsedTime = parseTimeFromNote(trimmed, log.clockOut || log.updatedAt);
+          let timeFallback = log.clockOut || log.updatedAt;
+          const noteHasTime = /(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)/i.test(trimmed);
+          if (!noteHasTime && index < parts.length - 1) {
+            const nextPart = parts[index + 1].trim();
+            const nextMatch = nextPart.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)/i);
+            if (nextMatch) {
+              timeFallback = parseTimeFromNote(nextPart, timeFallback);
+            }
+          }
+          const parsedTime = parseTimeFromNote(trimmed, timeFallback);
           events.push({ type: 'FORCE_CHECKOUT', timestamp: parsedTime, note: trimmed });
         } else if (trimmed.includes('Re-clocked in')) {
           const parsedTime = parseTimeFromNote(trimmed, log.updatedAt);

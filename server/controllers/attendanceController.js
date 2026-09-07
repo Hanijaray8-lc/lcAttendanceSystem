@@ -807,7 +807,8 @@ export const forceCheckOut = asyncHandler(async (req, res, next) => {
 
   attendance.clockOut = now;
   attendance.totalHours = totalHours;
-  const forceNote = `Force checked out by ${req.user.firstName} ${req.user.lastName} (${req.user.role})${reason ? ': ' + reason : ''}`;
+  const forceTimeStr = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+  const forceNote = `Force checked out at ${forceTimeStr} IST by ${req.user.firstName} ${req.user.lastName} (${req.user.role})${reason ? ': ' + reason : ''}`;
   attendance.notes = attendance.notes ? `${attendance.notes} | ${forceNote}` : forceNote;
   if (totalHours < 4 && attendance.status !== 'LATE') attendance.status = 'HALF_DAY';
 

@@ -106,12 +106,21 @@ export const AttendanceTimelineModal = ({ isOpen, onClose, liveItem }) => {
   const notesStr = attendance?.notes || liveItem?.notes || '';
   if (notesStr && typeof notesStr === 'string') {
     const parts = notesStr.split('|');
-    parts.forEach(part => {
+    parts.forEach((part, index) => {
       const trimmed = part.trim();
       if (trimmed.includes('Force checked out')) {
+        let timeFallback = liveItem?.clockOutTime || attendance?.clockOut || attendance?.updatedAt;
+        const noteHasTime = /(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)/i.test(trimmed);
+        if (!noteHasTime && index < parts.length - 1) {
+          const nextPart = parts[index + 1].trim();
+          const nextMatch = nextPart.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)/i);
+          if (nextMatch) {
+            timeFallback = parseTimeFromNote(nextPart, timeFallback);
+          }
+        }
         rawTimeline.push({
           type: 'FORCE_CHECKOUT',
-          timestamp: parseTimeFromNote(trimmed, liveItem?.clockOutTime || attendance?.clockOut || attendance?.updatedAt),
+          timestamp: parseTimeFromNote(trimmed, timeFallback),
           workLocation: liveItem?.workLocation || attendance?.workLocation,
           note: trimmed
         });
