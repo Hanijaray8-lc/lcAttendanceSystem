@@ -193,6 +193,7 @@ export const clockIn = asyncHandler(async (req, res, next) => {
         note: newNote
       });
 
+      existingAttendance.markModified('timeline');
       await existingAttendance.save();
       return res.status(200).json({
         status: 'success',
@@ -280,6 +281,7 @@ export const clockIn = asyncHandler(async (req, res, next) => {
             note: newNote
           });
 
+          duplicateDoc.markModified('timeline');
           await duplicateDoc.save();
           return res.status(200).json({
             status: 'success',

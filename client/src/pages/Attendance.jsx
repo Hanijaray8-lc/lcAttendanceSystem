@@ -302,6 +302,17 @@ export const Attendance = () => {
     });
   };
 
+  const getLatestClockInTimestamp = (item) => {
+    if (!item) return null;
+    const logObj = item.attendance || item;
+    const timeline = getDetailLogTimeline(logObj);
+    const loginEvents = timeline.filter((e) => e.type === 'CLOCK_IN');
+    if (loginEvents.length > 0) {
+      return loginEvents[loginEvents.length - 1].timestamp;
+    }
+    return item.clockInTime || item.lastClockInTime || logObj.clockIn || null;
+  };
+
   const isLogActiveSession = (log) => {
     if (!log || !log.clockIn || log.isSyntheticAbsent || log.status === 'ABSENT' || log.status === 'WEEK_OFF') return false;
     
@@ -935,8 +946,8 @@ export const Attendance = () => {
               </div>
 
               <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
-                {todayAttendance?.clockIn
-                  ? `Logged In at ${new Date(todayAttendance.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                {getLatestClockInTimestamp(todayAttendance)
+                  ? `Logged In at ${new Date(getLatestClockInTimestamp(todayAttendance)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                   : 'Not Logged In Yet'}
               </h3>
 
@@ -1084,9 +1095,7 @@ export const Attendance = () => {
 
                 const canForceCheckout = isCheckedIn || isOnLunch;
 
-                const displayClockIn = (Array.isArray(item.timeline) && item.timeline.length > 0)
-                  ? ([...item.timeline].reverse().find(t => t.type === 'CLOCK_IN')?.timestamp || item.clockInTime)
-                  : (item.clockInTime || item.lastClockInTime);
+                const displayClockIn = getLatestClockInTimestamp(item);
 
                 // Card background & border style matching Image 1
                 let cardStyle = `${palette.cardBg} ${palette.leftBorder}`;
