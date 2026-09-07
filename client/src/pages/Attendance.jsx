@@ -242,15 +242,17 @@ export const Attendance = () => {
 
   const parseTimeFromNote = (noteStr, defaultDateStr) => {
     if (!noteStr) return defaultDateStr;
-    const match = noteStr.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm))/i);
+    const match = noteStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)/i);
     if (match) {
-      const timeStr = match[1];
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3].toLowerCase();
+      if (ampm === 'pm' && hours < 12) hours += 12;
+      if (ampm === 'am' && hours === 12) hours = 0;
+
       const baseDate = new Date(defaultDateStr || Date.now());
-      const datePart = baseDate.toISOString().split('T')[0];
-      const parsed = new Date(`${datePart} ${timeStr}`);
-      if (!isNaN(parsed.getTime())) {
-        return parsed.toISOString();
-      }
+      baseDate.setHours(hours, minutes, 0, 0);
+      return baseDate.toISOString();
     }
     return defaultDateStr;
   };

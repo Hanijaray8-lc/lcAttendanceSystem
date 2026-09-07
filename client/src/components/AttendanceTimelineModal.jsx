@@ -28,6 +28,23 @@ const calculateGapString = (startIso, endIso) => {
   return `${hrs}h ${remMins}m`;
 };
 
+const parseTimeFromNote = (noteStr, defaultDateStr) => {
+  if (!noteStr) return defaultDateStr;
+  const match = noteStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const ampm = match[3].toLowerCase();
+    if (ampm === 'pm' && hours < 12) hours += 12;
+    if (ampm === 'am' && hours === 12) hours = 0;
+
+    const baseDate = new Date(defaultDateStr || Date.now());
+    baseDate.setHours(hours, minutes, 0, 0);
+    return baseDate.toISOString();
+  }
+  return defaultDateStr;
+};
+
 export const AttendanceTimelineModal = ({ isOpen, onClose, liveItem }) => {
   if (!liveItem) return null;
 
@@ -85,14 +102,14 @@ export const AttendanceTimelineModal = ({ isOpen, onClose, liveItem }) => {
         if (trimmed.includes('Force checked out')) {
           rawTimeline.push({
             type: 'FORCE_CHECKOUT',
-            timestamp: liveItem.clockOutTime || attendance.clockOut || attendance.updatedAt || new Date().toISOString(),
+            timestamp: parseTimeFromNote(trimmed, liveItem.clockOutTime || attendance.clockOut || attendance.updatedAt),
             workLocation: liveItem.workLocation || attendance.workLocation,
             note: trimmed
           });
         } else if (trimmed.includes('Re-clocked in')) {
           rawTimeline.push({
             type: 'CLOCK_IN',
-            timestamp: attendance.updatedAt || new Date().toISOString(),
+            timestamp: parseTimeFromNote(trimmed, attendance.updatedAt),
             workLocation: liveItem.workLocation || attendance.workLocation,
             note: trimmed
           });
@@ -145,7 +162,7 @@ export const AttendanceTimelineModal = ({ isOpen, onClose, liveItem }) => {
 
   // Calculate stats
   const lastEvent = rawTimeline[rawTimeline.length - 1];
-  const isActiveSession = (lastEvent?.type === 'CLOCK_IN' || lastEvent?.type === 'LUNCH_IN') && !attendance.clockOut;
+  const isActiveSession = lastEvent?.type === 'CLOCK_IN' || lastEvent?.type === 'LUNCH_IN';
 
   const firstClockIn = rawTimeline.find(t => t.type === 'CLOCK_IN')?.timestamp || liveItem.clockInTime || attendance.clockIn;
   const lastClockOut = isActiveSession 
