@@ -1666,8 +1666,8 @@ export const Attendance = () => {
 
                         {/* LOGIN / LOGOUT Column */}
                         <div className="flex flex-col font-extrabold text-left">
-                          <span className={`text-xs sm:text-sm ${isPresent ? 'text-emerald-600 dark:text-emerald-400' : isLate ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 font-normal'}`}>
-                            {isPresent || isLate ? formatClockTime(log.clockIn) : '--'}
+                          <span className={`text-xs sm:text-sm ${isPresent ? 'text-emerald-600 dark:text-emerald-400' : isLate ? 'text-amber-600 dark:text-amber-400' : log.clockIn ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 font-normal'}`}>
+                            {log.clockIn ? formatClockTime(getLatestClockInTimestamp(log) || log.clockIn) : '--'}
                           </span>
                           <span className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
                             {log.clockOut ? formatClockTime(log.clockOut) : '--'}
@@ -1676,7 +1676,7 @@ export const Attendance = () => {
 
                         {/* DURATION Column */}
                         <div className="font-extrabold text-slate-700 dark:text-slate-300 text-xs sm:text-sm whitespace-nowrap text-center hidden sm:block">
-                          {log.clockIn && log.clockOut ? formatWorkDuration(log) : <span className="text-slate-400 font-normal">--</span>}
+                          {log.clockIn ? formatWorkDuration(log) : <span className="text-slate-400 font-normal">--</span>}
                         </div>
 
                         {/* STATUS Column */}
