@@ -1635,9 +1635,11 @@ export const Attendance = () => {
                 {paginatedLogs.length > 0 ? (
                   paginatedLogs.map((log) => {
                     const dateObj = new Date(log.clockIn || log.date);
-                    const isPresent = log.status === 'PRESENT';
-                    const isLate = log.status === 'LATE';
-                    const isAbsent = log.status === 'ABSENT';
+                    const isActiveSession = isLogActiveSession(log) || (log.clockIn && !log.clockOut);
+                    const displayStatus = (isActiveSession && log.status === 'HALF_DAY') ? 'PRESENT' : log.status;
+                    const isPresent = displayStatus === 'PRESENT';
+                    const isLate = displayStatus === 'LATE';
+                    const isAbsent = displayStatus === 'ABSENT';
 
                     return (
                       <div

@@ -465,6 +465,13 @@ export const getTodayAttendance = asyncHandler(async (req, res, next) => {
   const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
   const attendance = (latest && (isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
 
+  if (attendance && attendance.clockIn && !attendance.clockOut && attendance.status === 'HALF_DAY') {
+    const firstClockInIST = getISTTime(new Date(attendance.clockIn));
+    const originalIsLate = firstClockInIST.hours >= 9 && (firstClockInIST.hours > 9 || firstClockInIST.minutes > 40);
+    attendance.status = firstClockInIST.isSunday ? 'OVER_DUTY' : (originalIsLate ? 'LATE' : 'PRESENT');
+    await attendance.save();
+  }
+
   res.status(200).json({
     status: 'success',
     data: { attendance }
@@ -524,6 +531,16 @@ export const getAttendanceLogs = asyncHandler(async (req, res, next) => {
 
   // Strictly filter out any logs without a valid user object or with CEO role
   const logs = rawLogs.filter((l) => l.user && l.user.role !== 'CEO');
+
+  // Auto-heal active sessions stuck on HALF_DAY
+  for (const log of logs) {
+    if (log.clockIn && !log.clockOut && log.status === 'HALF_DAY') {
+      const firstClockInIST = getISTTime(new Date(log.clockIn));
+      const originalIsLate = firstClockInIST.hours >= 9 && (firstClockInIST.hours > 9 || firstClockInIST.minutes > 40);
+      log.status = firstClockInIST.isSunday ? 'OVER_DUTY' : (originalIsLate ? 'LATE' : 'PRESENT');
+      await Attendance.updateOne({ _id: log._id }, { status: log.status });
+    }
+  }
 
   // Calculate Summary Metrics (for the current user's visible logs only)
   const totalDays = logs.length;
