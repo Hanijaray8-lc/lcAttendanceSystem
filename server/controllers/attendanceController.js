@@ -181,6 +181,10 @@ export const clockIn = asyncHandler(async (req, res, next) => {
       existingAttendance.totalHours = undefined;
       if (workLocation) existingAttendance.workLocation = workLocation;
 
+      const firstClockInIST = getISTTime(new Date(existingAttendance.clockIn || now));
+      const originalIsLate = firstClockInIST.hours >= 9 && (firstClockInIST.hours > 9 || firstClockInIST.minutes > 40);
+      existingAttendance.status = firstClockInIST.isSunday ? 'OVER_DUTY' : (originalIsLate ? 'LATE' : 'PRESENT');
+
       const timeLogStr = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
       const newNote = `Re-clocked in at ${timeLogStr} IST`;
       existingAttendance.notes = existingAttendance.notes ? `${existingAttendance.notes} | ${newNote}` : newNote;
@@ -268,6 +272,10 @@ export const clockIn = asyncHandler(async (req, res, next) => {
           duplicateDoc.clockOut = undefined;
           duplicateDoc.totalHours = undefined;
           if (workLocation) duplicateDoc.workLocation = workLocation;
+
+          const firstClockInIST = getISTTime(new Date(duplicateDoc.clockIn || now));
+          const originalIsLate = firstClockInIST.hours >= 9 && (firstClockInIST.hours > 9 || firstClockInIST.minutes > 40);
+          duplicateDoc.status = firstClockInIST.isSunday ? 'OVER_DUTY' : (originalIsLate ? 'LATE' : 'PRESENT');
 
           const timeLogStr = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
           const newNote = `Re-clocked in at ${timeLogStr} IST`;
