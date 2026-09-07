@@ -272,26 +272,38 @@ export const Attendance = () => {
       if (log.lunchIn) {
         events.push({ type: 'LUNCH_IN', timestamp: log.lunchIn });
       }
-      if (log.notes && typeof log.notes === 'string') {
-        const parts = log.notes.split('|');
-        parts.forEach((part) => {
-          const trimmed = part.trim();
-          if (trimmed.includes('Force checked out')) {
-            const parsedTime = parseTimeFromNote(trimmed, log.clockOut || log.updatedAt);
-            events.push({ type: 'FORCE_CHECKOUT', timestamp: parsedTime, note: trimmed });
-          } else if (trimmed.includes('Re-clocked in')) {
-            const parsedTime = parseTimeFromNote(trimmed, log.updatedAt);
-            events.push({ type: 'CLOCK_IN', timestamp: parsedTime, note: trimmed });
-          }
-        });
-      }
-      if (log.clockOut && !events.some((e) => e.type === 'CLOCK_OUT' || e.type === 'FORCE_CHECKOUT')) {
+      if (log.clockOut) {
         events.push({ type: 'CLOCK_OUT', timestamp: log.clockOut });
       }
     }
 
+    if (log.notes && typeof log.notes === 'string') {
+      const parts = log.notes.split('|');
+      parts.forEach((part) => {
+        const trimmed = part.trim();
+        if (trimmed.includes('Force checked out')) {
+          const parsedTime = parseTimeFromNote(trimmed, log.clockOut || log.updatedAt);
+          events.push({ type: 'FORCE_CHECKOUT', timestamp: parsedTime, note: trimmed });
+        } else if (trimmed.includes('Re-clocked in')) {
+          const parsedTime = parseTimeFromNote(trimmed, log.updatedAt);
+          events.push({ type: 'CLOCK_IN', timestamp: parsedTime, note: trimmed });
+        }
+      });
+    }
+
+    const uniqueEvents = [];
+    const seenKeys = new Set();
+    events.forEach((item) => {
+      const timeMin = Math.floor(new Date(item.timestamp).getTime() / 60000);
+      const key = `${item.type}_${timeMin}_${item.note || ''}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueEvents.push(item);
+      }
+    });
+
     const typeOrder = { 'CLOCK_IN': 1, 'LUNCH_OUT': 2, 'LUNCH_IN': 3, 'FORCE_CHECKOUT': 4, 'CLOCK_OUT': 5 };
-    return events.sort((a, b) => {
+    return uniqueEvents.sort((a, b) => {
       const diff = new Date(a.timestamp) - new Date(b.timestamp);
       if (diff !== 0) return diff;
       

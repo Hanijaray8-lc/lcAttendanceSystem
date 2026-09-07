@@ -154,18 +154,14 @@ export const clockIn = asyncHandler(async (req, res, next) => {
 
       // Ensure the checkout event is preserved in timeline array before resetting clockOut
       if (!existingAttendance.timeline) existingAttendance.timeline = [];
-      const hasCheckoutInTimeline = existingAttendance.timeline.some(
-        (t) => t.type === 'CLOCK_OUT' || t.type === 'FORCE_CHECKOUT'
-      );
-      if (!hasCheckoutInTimeline) {
-        const isForce = existingAttendance.notes?.includes('Force checked out');
-        existingAttendance.timeline.push({
-          type: isForce ? 'FORCE_CHECKOUT' : 'CLOCK_OUT',
-          timestamp: existingAttendance.clockOut,
-          workLocation: existingAttendance.workLocation,
-          note: isForce ? existingAttendance.notes : undefined
-        });
-      }
+      const isForce = existingAttendance.notes?.includes('Force checked out');
+      existingAttendance.timeline.push({
+        type: isForce ? 'FORCE_CHECKOUT' : 'CLOCK_OUT',
+        timestamp: existingAttendance.clockOut,
+        workLocation: existingAttendance.workLocation,
+        note: isForce ? existingAttendance.notes : undefined
+      });
+      existingAttendance.markModified('timeline');
       if (existingAttendance.lunchOut && !existingAttendance.lunchIn) {
         existingAttendance.lunchIn = now;
         if (!existingAttendance.timeline) existingAttendance.timeline = [];

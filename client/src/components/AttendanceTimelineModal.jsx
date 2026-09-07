@@ -93,51 +93,63 @@ export const AttendanceTimelineModal = ({ isOpen, onClose, liveItem }) => {
       });
     }
 
-    // Parse all events recorded in notes (Force checked out, Re-clocked in, etc.)
-    const notesStr = attendance.notes || liveItem.notes || '';
-    if (notesStr && typeof notesStr === 'string') {
-      const parts = notesStr.split('|');
-      parts.forEach(part => {
-        const trimmed = part.trim();
-        if (trimmed.includes('Force checked out')) {
-          rawTimeline.push({
-            type: 'FORCE_CHECKOUT',
-            timestamp: parseTimeFromNote(trimmed, liveItem.clockOutTime || attendance.clockOut || attendance.updatedAt),
-            workLocation: liveItem.workLocation || attendance.workLocation,
-            note: trimmed
-          });
-        } else if (trimmed.includes('Re-clocked in')) {
-          rawTimeline.push({
-            type: 'CLOCK_IN',
-            timestamp: parseTimeFromNote(trimmed, attendance.updatedAt),
-            workLocation: liveItem.workLocation || attendance.workLocation,
-            note: trimmed
-          });
-        }
-      });
-    }
-
-    if ((liveItem.clockOutTime || attendance.clockOut) && !rawTimeline.some(t => t.type === 'FORCE_CHECKOUT' || t.type === 'CLOCK_OUT')) {
+    if (liveItem.clockOutTime || attendance.clockOut) {
       rawTimeline.push({
         type: 'CLOCK_OUT',
         timestamp: liveItem.clockOutTime || attendance.clockOut,
-        workLocation: liveItem.workLocation || attendance.workLocation,
-        note: notesStr?.includes('Force checked out') ? notesStr : undefined
+        workLocation: liveItem.workLocation || attendance.workLocation
       });
     }
+  }
+
+  // Always parse notes to capture any force checkouts or re-clock ins recorded in notes
+  const notesStr = attendance?.notes || liveItem?.notes || '';
+  if (notesStr && typeof notesStr === 'string') {
+    const parts = notesStr.split('|');
+    parts.forEach(part => {
+      const trimmed = part.trim();
+      if (trimmed.includes('Force checked out')) {
+        rawTimeline.push({
+          type: 'FORCE_CHECKOUT',
+          timestamp: parseTimeFromNote(trimmed, liveItem?.clockOutTime || attendance?.clockOut || attendance?.updatedAt),
+          workLocation: liveItem?.workLocation || attendance?.workLocation,
+          note: trimmed
+        });
+      } else if (trimmed.includes('Re-clocked in')) {
+        rawTimeline.push({
+          type: 'CLOCK_IN',
+          timestamp: parseTimeFromNote(trimmed, attendance?.updatedAt),
+          workLocation: liveItem?.workLocation || attendance?.workLocation,
+          note: trimmed
+        });
+      }
+    });
   }
 
   // Deduplicate and sort chronologically
   const uniqueTimeline = [];
   const seenKeys = new Set();
   rawTimeline.forEach(item => {
-    const key = `${item.type}_${new Date(item.timestamp).getTime()}_${item.note || ''}`;
+    const timeMin = Math.floor(new Date(item.timestamp).getTime() / 60000);
+    const key = `${item.type}_${timeMin}_${item.note || ''}`;
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
       uniqueTimeline.push(item);
     }
   });
-  rawTimeline = uniqueTimeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const typeOrder = { 'CLOCK_IN': 1, 'LUNCH_OUT': 2, 'LUNCH_IN': 3, 'FORCE_CHECKOUT': 4, 'CLOCK_OUT': 5 };
+  rawTimeline = uniqueTimeline.sort((a, b) => {
+    const diff = new Date(a.timestamp) - new Date(b.timestamp);
+    if (diff !== 0) return diff;
+    
+    const aIsReclock = a.note?.includes('Re-clocked in');
+    const bIsReclock = b.note?.includes('Re-clocked in');
+    if (aIsReclock && !bIsReclock) return 1;
+    if (bIsReclock && !aIsReclock) return -1;
+
+    return (typeOrder[a.type] || 0) - (typeOrder[b.type] || 0);
+  });
 
   // Interleave Break duration gaps between events
   const displayTimeline = [];
