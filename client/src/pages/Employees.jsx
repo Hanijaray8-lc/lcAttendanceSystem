@@ -153,6 +153,7 @@ export const Employees = () => {
     employeeId: '',
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     password: '',
     phone: '',
@@ -234,6 +235,13 @@ export const Employees = () => {
         payload.isFaceRegistered = true;
       }
 
+      // If email is empty, fallback to username
+      const uname = (payload.username || '').trim();
+      const mail = (payload.email || '').trim();
+      if (!mail && uname) {
+        payload.email = uname;
+      }
+
       await api.post('/employees', payload);
       setIsCreateModalOpen(false);
       setCapturedFaceDescriptor(null);
@@ -242,6 +250,7 @@ export const Employees = () => {
         employeeId: '',
         firstName: '',
         lastName: '',
+        username: '',
         email: '',
         password: '',
         phone: '',
@@ -637,22 +646,40 @@ export const Employees = () => {
               </div>
             </div>
 
-            {/* Email Address */}
-            <div>
-              <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
-                Email Address <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 pointer-events-none" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Enter email address"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                  required
-                  autoComplete="off"
-                />
+            {/* Username & Email Address in separate boxes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
+                  Username <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="Enter username"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 pointer-events-none" />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Enter email address"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    autoComplete="off"
+                  />
+                </div>
               </div>
             </div>
 

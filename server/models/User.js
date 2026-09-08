@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
     dateOfBirth: {
       type: Date
     },
+    username: {
+      type: String,
+      trim: true,
+      index: true
+    },
     email: {
       type: String,
       required: true,
