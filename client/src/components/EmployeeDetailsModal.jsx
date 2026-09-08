@@ -66,22 +66,27 @@ export const EmployeeDetailsModal = ({
     setEditForm({ ...editForm, phone: cleaned });
   };
 
+  const populateEditForm = (empData) => {
+    if (!empData) return;
+    setEditForm({
+      username: empData.username || (empData.role === 'CEO' ? 'Alban Santhosh' : ''),
+      email: empData.email || (empData.role === 'CEO' ? 'albansanthosh@enterprise.com' : ''),
+      firstName: empData.firstName || '',
+      lastName: empData.lastName || '',
+      phone: empData.phone || '',
+      employeeId: empData.employeeId || '',
+      department: empData.department?._id || empData.department || '',
+      designation: empData.designation?._id || empData.designation || '',
+      role: empData.role || 'EMPLOYEE',
+      employmentType: empData.employmentType || 'Full Time',
+      reportingManager: empData.reportingManager?._id || empData.reportingManager || '',
+      password: ''
+    });
+  };
+
   useEffect(() => {
     if (employee) {
-      setEditForm({
-        username: employee.username || (employee.role === 'CEO' ? 'Alban Santhosh' : ''),
-        email: employee.email || '',
-        firstName: employee.firstName || '',
-        lastName: employee.lastName || '',
-        phone: employee.phone || '',
-        employeeId: employee.employeeId || '',
-        department: employee.department?._id || employee.department || '',
-        designation: employee.designation?._id || employee.designation || '',
-        role: employee.role || 'EMPLOYEE',
-        employmentType: employee.employmentType || 'Full Time',
-        reportingManager: employee.reportingManager?._id || employee.reportingManager || '',
-        password: ''
-      });
+      populateEditForm(employee);
       setIsEditing(false);
     }
   }, [employee, isOpen]);
@@ -429,7 +434,10 @@ export const EmployeeDetailsModal = ({
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    populateEditForm(employee);
+                    setIsEditing(true);
+                  }}
                   className="px-4 py-2.5 bg-blue-50 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-400 text-xs font-black rounded-xl flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
                 >
                   <Edit3 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Edit Employee Details
@@ -487,13 +495,14 @@ export const EmployeeDetailsModal = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email Address</label>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email Address *</label>
                 <input
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                   className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
                   placeholder="Enter email address"
+                  required
                 />
               </div>
             </div>
