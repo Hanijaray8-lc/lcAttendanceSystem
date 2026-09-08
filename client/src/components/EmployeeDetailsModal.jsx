@@ -555,21 +555,24 @@ export const EmployeeDetailsModal = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Department</label>
-                <select
-                  value={editForm.department}
-                  onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
-                  className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
-                >
-                  <option value="">Select Dept</option>
-                  {departments.map((d) => (
-                    <option key={d._id} value={d._id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Department — hidden for CEO */}
+              {!isTargetCEO && (
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Department</label>
+                  <select
+                    value={editForm.department}
+                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                    className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
+                  >
+                    <option value="">Select Dept</option>
+                    {departments.map((d) => (
+                      <option key={d._id} value={d._id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div>
+              <div className={isTargetCEO ? 'sm:col-span-2' : ''}>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Designation</label>
                 <select
                   value={editForm.designation}
