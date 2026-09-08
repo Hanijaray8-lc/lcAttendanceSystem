@@ -238,6 +238,27 @@ export const updateEmployee = asyncHandler(async (req, res, next) => {
   if (updateData.designation === undefined) delete updateData.designation;
   if (updateData.reportingManager === undefined) delete updateData.reportingManager;
 
+  // Handle email uniqueness check if changing email
+  if (updateData.email && typeof updateData.email === 'string' && updateData.email.trim()) {
+    const cleanEmail = updateData.email.toLowerCase().trim();
+    updateData.email = cleanEmail;
+
+    // Check if another account has this email
+    const existingUser = await User.findOne({ email: cleanEmail, _id: { $ne: req.params.id } });
+    if (existingUser) {
+      // If the duplicate is an old/dummy account, clear its email so this edit succeeds
+      if (existingUser.isDeleted || existingUser.status === 'INACTIVE' || existingUser.employeeId !== 'EMP001') {
+        await User.findByIdAndUpdate(existingUser._id, { email: `inactive_${Date.now()}_${cleanEmail}` });
+      } else {
+        return next(new AppError(`The email '${cleanEmail}' is already assigned to ${existingUser.firstName} ${existingUser.lastName}.`, 400));
+      }
+    }
+  }
+
+  if (updateData.username && typeof updateData.username === 'string') {
+    updateData.username = updateData.username.trim();
+  }
+
   // Remove empty required string fields to avoid overwriting with empty string
   ['firstName', 'lastName', 'email', 'employeeId'].forEach((field) => {
     if (field in updateData && !updateData[field]?.toString().trim()) {

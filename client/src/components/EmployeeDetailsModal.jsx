@@ -16,7 +16,7 @@ export const EmployeeDetailsModal = ({
   onToggleStatus,
   onUpdateSuccess
 }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
@@ -212,6 +212,13 @@ export const EmployeeDetailsModal = ({
       const currentUserId = user?._id || user?.id;
       const targetEmployeeId = employee._id || employee.id;
       const isSelf = currentUserId && targetEmployeeId && String(currentUserId) === String(targetEmployeeId);
+      const updatedEmpData = response.data?.data?.employee;
+
+      if (isSelf && updatedEmpData) {
+        const updatedUser = { ...user, ...updatedEmpData };
+        if (setUser) setUser(updatedUser);
+        localStorage.setItem('elms_user', JSON.stringify(updatedUser));
+      }
 
       setIsEditing(false);
       onClose();
@@ -229,7 +236,7 @@ export const EmployeeDetailsModal = ({
       }
       
       // Trigger parent to refresh employee list
-      if (onUpdateSuccess) onUpdateSuccess(response.data?.data?.employee);
+      if (onUpdateSuccess) onUpdateSuccess(updatedEmpData);
     } catch (err) {
       console.error('[EmployeeModal] Update failed:', err.response?.data);
       alert(err.response?.data?.message || 'Failed to update employee details.');
