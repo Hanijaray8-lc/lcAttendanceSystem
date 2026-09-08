@@ -100,9 +100,10 @@ export const login = asyncHandler(async (req, res, next) => {
       const hashedPassword = await bcrypt.hash('Alban@123', 12);
       await User.updateOne(
         { _id: user._id }, 
-        { $set: { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', email: 'albansanthosh@enterprise.com', status: 'ACTIVE' } }
+        { $set: { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', username: 'Alban Santhosh', email: 'albansanthosh@enterprise.com', status: 'ACTIVE' } }
       );
       user.password = hashedPassword;
+      user.username = 'Alban Santhosh';
       user.email = 'albansanthosh@enterprise.com';
       user.status = 'ACTIVE';
     }

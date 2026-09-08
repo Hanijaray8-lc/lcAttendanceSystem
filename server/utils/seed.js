@@ -44,6 +44,7 @@ export const updateCeoName = async () => {
       { 
         firstName: 'Alban', 
         lastName: 'Santhosh A',
+        username: 'Alban Santhosh',
         email: 'albansanthosh@enterprise.com',
         password: hashedPassword,
         plainPassword: 'Alban@123'
@@ -138,6 +139,7 @@ export const runAutoSeed = async () => {
         employeeId: 'EMP001',
         firstName: 'Alban',
         lastName: 'Santhosh A',
+        username: 'Alban Santhosh',
         email: 'albansanthosh@enterprise.com',
         password: 'Alban@123',
         role: 'CEO',

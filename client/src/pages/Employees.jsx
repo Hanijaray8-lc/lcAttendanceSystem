@@ -422,10 +422,10 @@ export const Employees = () => {
 
                   {/* Tinted Profile Info Box */}
                   <div className={`${theme.boxBg} rounded-2xl p-3.5 border space-y-2.5 text-xs`}>
-                    {/* Email */}
+                    {/* Username */}
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-semibold min-w-0">
-                      <Mail className={`w-4 h-4 ${theme.iconColor} shrink-0`} />
-                      <span className="truncate">{emp.email || '—'}</span>
+                      <User className={`w-4 h-4 ${theme.iconColor} shrink-0`} />
+                      <span className="truncate">{emp.role === 'CEO' ? (emp.username || 'Alban Santhosh') : (emp.username || emp.email || '—')}</span>
                     </div>
 
                     {/* Department & Designation */}
@@ -488,7 +488,7 @@ export const Employees = () => {
                         <h3 className={`font-extrabold text-slate-900 dark:text-white text-xs sm:text-base truncate capitalize tracking-tight ${theme.nameHover} transition-colors`}>
                           {emp.firstName} {emp.lastName}
                         </h3>
-                        <p className="text-[11px] text-slate-500 font-medium truncate">{emp.email}</p>
+                        <p className="text-[11px] text-slate-500 font-medium truncate">{emp.role === 'CEO' ? (emp.username || 'Alban Santhosh') : (emp.username || emp.email)}</p>
                       </div>
                     </div>
 

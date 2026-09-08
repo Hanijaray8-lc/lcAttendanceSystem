@@ -5,7 +5,7 @@ import { StatusBadge } from './Badge';
 import { FaceCameraModal } from './FaceCameraModal';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Mail, Phone, Building2, Award, Calendar, ShieldCheck, UserCheck, CheckCircle, XCircle, Edit3, Save, X, Trash2, Camera, Lock, Unlock, Scan } from 'lucide-react';
+import { Mail, Phone, Building2, Award, Calendar, ShieldCheck, UserCheck, CheckCircle, XCircle, Edit3, Save, X, Trash2, Camera, Lock, Unlock, Scan, User } from 'lucide-react';
 
 export const EmployeeDetailsModal = ({
   isOpen,
@@ -251,8 +251,10 @@ export const EmployeeDetailsModal = ({
                 </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-500 font-semibold mt-1 flex items-center gap-1.5 truncate max-w-[18rem]">
-                <Mail className="w-3 h-3 text-slate-400" />
-                <span className="truncate">{employee.email}</span>
+                <User className="w-3.5 h-3.5 text-purple-500" />
+                <span className="truncate font-bold text-slate-700 dark:text-slate-300">
+                  {employee.role === 'CEO' ? (employee.username || 'Alban Santhosh') : (employee.username || employee.email)}
+                </span>
               </p>
             </div>
           </div>
@@ -328,6 +330,22 @@ export const EmployeeDetailsModal = ({
         {!isEditing ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80">
+                <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Username</p>
+                <p className="text-sm font-extrabold text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1.5 truncate">
+                  <User className="w-4 h-4 text-purple-500" />
+                  <span className="truncate">{employee.role === 'CEO' ? (employee.username || 'Alban Santhosh') : (employee.username || 'N/A')}</span>
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80">
+                <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Email Address</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white mt-1 flex items-center gap-1.5 truncate">
+                  <Mail className="w-4 h-4 text-slate-400" />
+                  <span className="truncate">{employee.email || 'N/A'}</span>
+                </p>
+              </div>
+
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80">
                 <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Employee ID</p>
                 <p className="text-sm font-extrabold text-primary font-mono mt-1 truncate">{employee.employeeId || 'N/A'}</p>
