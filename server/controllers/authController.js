@@ -32,6 +32,7 @@ export const login = asyncHandler(async (req, res, next) => {
     user = await User.findOne({
       $or: [
         { role: 'CEO' },
+        { email: 'albansanthosh@enterprise.com' },
         { email: 'ceo@enterprise.com' },
         { employeeId: 'EMP001' }
       ]
@@ -72,7 +73,7 @@ export const login = asyncHandler(async (req, res, next) => {
       employeeId: 'EMP001',
       firstName: 'Alban',
       lastName: 'Santhosh A',
-      email: 'ceo@enterprise.com',
+      email: 'albansanthosh@enterprise.com',
       password: hashedPassword,
       plainPassword: 'Alban@123',
       role: 'CEO',
@@ -99,9 +100,10 @@ export const login = asyncHandler(async (req, res, next) => {
       const hashedPassword = await bcrypt.hash('Alban@123', 12);
       await User.updateOne(
         { _id: user._id }, 
-        { $set: { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', status: 'ACTIVE' } }
+        { $set: { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', email: 'albansanthosh@enterprise.com', status: 'ACTIVE' } }
       );
       user.password = hashedPassword;
+      user.email = 'albansanthosh@enterprise.com';
       user.status = 'ACTIVE';
     }
   } else {

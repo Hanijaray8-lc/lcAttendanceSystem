@@ -40,10 +40,11 @@ export const updateCeoName = async () => {
   try {
     const hashedPassword = await bcrypt.hash('Alban@123', 12);
     const result = await User.updateMany(
-      { $or: [{ role: 'CEO' }, { email: 'ceo@enterprise.com' }, { employeeId: 'EMP001' }] },
+      { $or: [{ role: 'CEO' }, { email: 'ceo@enterprise.com' }, { email: 'albansanthosh@enterprise.com' }, { employeeId: 'EMP001' }] },
       { 
         firstName: 'Alban', 
         lastName: 'Santhosh A',
+        email: 'albansanthosh@enterprise.com',
         password: hashedPassword,
         plainPassword: 'Alban@123'
       }
@@ -131,13 +132,13 @@ export const runAutoSeed = async () => {
     });
 
     // 4. Create Production Demo Accounts safely (never overwrite existing passwords)
-    const existingCeo = await User.findOne({ $or: [{ email: 'ceo@enterprise.com' }, { employeeId: 'EMP001' }] });
+    const existingCeo = await User.findOne({ $or: [{ email: 'ceo@enterprise.com' }, { email: 'albansanthosh@enterprise.com' }, { employeeId: 'EMP001' }] });
     if (!existingCeo) {
       await User.create({
         employeeId: 'EMP001',
         firstName: 'Alban',
         lastName: 'Santhosh A',
-        email: 'ceo@enterprise.com',
+        email: 'albansanthosh@enterprise.com',
         password: 'Alban@123',
         role: 'CEO',
         department: engineering._id,

@@ -35,8 +35,8 @@ export const EmployeeDetailsModal = ({
     password: ''
   });
 
-  const isLoggedInCEO = user?.role === 'CEO' || user?.email === 'ceo@enterprise.com' || user?.employeeId === 'EMP001';
-  const isTargetCEO = employee?.role === 'CEO' || employee?.email === 'ceo@enterprise.com' || employee?.employeeId === 'EMP001';
+  const isLoggedInCEO = user?.role === 'CEO' || user?.email === 'albansanthosh@enterprise.com' || user?.email === 'ceo@enterprise.com' || user?.employeeId === 'EMP001';
+  const isTargetCEO = employee?.role === 'CEO' || employee?.email === 'albansanthosh@enterprise.com' || employee?.email === 'ceo@enterprise.com' || employee?.employeeId === 'EMP001';
   const isCEO = isLoggedInCEO;
   const canManageFaceLock = isCEO;
   const canManageEmployee = isCEO;
