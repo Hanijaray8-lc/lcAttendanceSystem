@@ -587,16 +587,25 @@ export const EmployeeDetailsModal = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Role</label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                  className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
-                >
-                  <option value="EMPLOYEE">Employee</option>
-                  <option value="TEAM_LEAD">Team Lead</option>
-                  <option value="HR">HR</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
+                {isTargetCEO ? (
+                  <div className="w-full p-2.5 sm:p-3 bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-between cursor-not-allowed opacity-80">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-700 dark:text-slate-300">CEO</span>
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-extrabold">
+                      <Lock className="w-3 h-3" /> Locked
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                    className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
+                  >
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="TEAM_LEAD">Team Lead</option>
+                    <option value="HR">HR</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                )}
               </div>
 
               <div>

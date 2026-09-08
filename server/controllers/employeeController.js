@@ -275,6 +275,13 @@ export const updateEmployee = asyncHandler(async (req, res, next) => {
     }
   });
 
+  // Protect CEO role — cannot be changed to any other role
+  const isCEOAccount = employee.role === 'CEO' || employee.email === 'ceo@enterprise.com' || employee.employeeId === 'EMP001';
+  if (isCEOAccount) {
+    // Prevent role change for CEO account
+    delete updateData.role;
+  }
+
   const updatedEmployee = await User.findByIdAndUpdate(
     req.params.id,
     { $set: updateData },
