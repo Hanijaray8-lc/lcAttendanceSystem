@@ -59,8 +59,8 @@ export const EmployeeDetailsModal = ({
   }, [isOpen, departments, designations, employee]);
 
   const handlePhoneChange = (value) => {
-    // Allow +, digits, spaces, hyphens — max 15 chars (international format)
-    const cleaned = value.replace(/[^\d\s\+\-\(\)]/g, '').slice(0, 15);
+    // Only numbers, max 10 digits
+    const cleaned = value.replace(/\D/g, '').slice(0, 10);
     setEditForm({ ...editForm, phone: cleaned });
   };
 
@@ -485,8 +485,8 @@ export const EmployeeDetailsModal = ({
                 type="tel"
                 value={editForm.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
-                maxLength={15}
-                placeholder="+91 9876543210"
+                maxLength={10}
+                placeholder="Enter 10-digit phone number"
                 className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
               />
             </div>
