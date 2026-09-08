@@ -439,7 +439,7 @@ export const Employees = () => {
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 font-semibold min-w-0">
                       <Building2 className={`w-4 h-4 ${theme.iconColor} shrink-0`} />
                       <span className="truncate">
-                        <strong className="font-extrabold text-slate-900 dark:text-white">{emp.department?.name || 'General'}</strong>
+                        <strong className="font-extrabold text-slate-900 dark:text-white">{emp.role === 'CEO' ? 'CEO' : (emp.department?.name || 'General')}</strong>
                         {emp.designation?.name && <span className="text-slate-500 font-medium"> • {emp.designation.name}</span>}
                       </span>
                     </div>
@@ -519,7 +519,7 @@ export const Employees = () => {
 
                   {/* Department & Designation Column */}
                   <div className="hidden md:flex md:col-span-3 flex-col">
-                    <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">{emp.department?.name || '—'}</p>
+                    <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">{emp.role === 'CEO' ? 'CEO' : (emp.department?.name || '—')}</p>
                     <p className="text-[11px] text-slate-500 font-semibold truncate">{emp.designation?.name || '—'}</p>
                   </div>
 
