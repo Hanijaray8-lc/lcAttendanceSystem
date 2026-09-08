@@ -1,7 +1,13 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables FIRST before any other imports
 dotenv.config();
+
+// __dirname equivalent for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // LCM Server Entry Point
 import express from 'express';
@@ -134,15 +140,11 @@ app.get('/api/csrf-token', (req, res) => {
 app.use(doubleCsrfProtection);
 */
 
-// Root & Health Check API
-app.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    service: 'Enterprise Life Changers Management (ELCM) API Backend',
-    version: '1.0.0'
-  });
-});
+// Serve React Frontend (Static Files from client/dist)
+const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+app.use(express.static(clientDistPath));
 
+// Health Check API
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -150,6 +152,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -166,6 +170,11 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/daily-reports', dailyReportRoutes);
 app.use('/api/settings', settingsRoutes);
+
+// React Router SPA - All non-API routes serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+});
 
 // Global Error Handler
 app.use(globalErrorHandler);
