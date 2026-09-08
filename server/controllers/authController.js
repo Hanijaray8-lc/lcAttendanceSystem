@@ -88,28 +88,18 @@ export const login = asyncHandler(async (req, res, next) => {
     return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }
 
-  // 4. Password validation (Alban@123 always works for CEO)
-  let isValidPassword = false;
+  // 4. Password validation — same for all users including CEO
+  // New password set pannina, adhe password than work aagum
+  let isValidPassword = await user.comparePassword(password);
 
-  if (user.role === 'CEO' || user.employeeId === 'EMP001' || isCeoAttempt) {
-    if (password === 'Alban@123' || password === 'CEO@123') {
-      isValidPassword = true;
-    } else {
-      isValidPassword = await user.comparePassword(password);
-    }
+  if (isValidPassword && (user.role === 'CEO' || user.employeeId === 'EMP001')) {
+    // Only fill in missing fields — do NOT overwrite password or other custom data
+    const updateFields = { status: 'ACTIVE' };
+    if (!user.username) updateFields.username = 'Alban Santhosh';
+    if (!user.email) updateFields.email = 'albansanthosh@enterprise.com';
 
-    if (isValidPassword) {
-      const hashedPassword = await bcrypt.hash('Alban@123', 12);
-      const updateFields = { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', status: 'ACTIVE' };
-      if (!user.username) updateFields.username = 'Alban Santhosh';
-      if (!user.email) updateFields.email = 'albansanthosh@enterprise.com';
-
-      await User.updateOne({ _id: user._id }, { $set: updateFields });
-      user.password = hashedPassword;
-      user.status = 'ACTIVE';
-    }
-  } else {
-    isValidPassword = await user.comparePassword(password);
+    await User.updateOne({ _id: user._id }, { $set: updateFields });
+    user.status = 'ACTIVE';
   }
 
   if (!isValidPassword) {

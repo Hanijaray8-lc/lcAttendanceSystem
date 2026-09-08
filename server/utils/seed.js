@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import { Department } from '../models/Department.js';
 import { Designation } from '../models/Designation.js';
@@ -69,18 +68,17 @@ export const updateEarnedLeaveToPaidLeave = async () => {
 
 export const updateCeoName = async () => {
   try {
-    const hashedPassword = await bcrypt.hash('Alban@123', 12);
     const ceo = await User.findOne({ $or: [{ role: 'CEO' }, { employeeId: 'EMP001' }] });
     if (ceo) {
-      ceo.firstName = 'Alban';
-      ceo.lastName = 'Santhosh A';
-      if (!ceo.username) ceo.username = 'Alban Santhosh';
-      if (!ceo.email) ceo.email = 'albansanthosh@enterprise.com';
-      ceo.password = hashedPassword;
-      ceo.plainPassword = 'Alban@123';
-      await ceo.save();
+      // Only fill in missing fields — never overwrite existing username, email, or password
+      let modified = false;
+      if (!ceo.username) { ceo.username = 'Alban Santhosh'; modified = true; }
+      if (!ceo.email) { ceo.email = 'albansanthosh@enterprise.com'; modified = true; }
+      if (!ceo.firstName) { ceo.firstName = 'Alban'; modified = true; }
+      if (!ceo.lastName) { ceo.lastName = 'Santhosh A'; modified = true; }
+      if (modified) await ceo.save({ validateBeforeSave: false });
     }
-    console.log('[Seed Engine] Verified CEO credentials for Alban Santhosh A');
+    console.log('[Seed Engine] Verified CEO account for Alban Santhosh A (no overwrite)');
   } catch (err) {
     console.error('[CEO Name Migration Error]', err);
   }
@@ -90,7 +88,8 @@ export const runAutoSeed = async () => {
   try {
     await updateEarnedLeaveToPaidLeave();
     await updateCeoName();
-    await clearAllLeaveRequests();
+    // NOTE: clearAllLeaveRequests is NOT called here anymore.
+    // It was a one-time cleanup and should not run on every server start.
 
     const deptCount = await Department.countDocuments();
     if (deptCount > 0) {

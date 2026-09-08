@@ -255,9 +255,9 @@ export const updateEmployee = asyncHandler(async (req, res, next) => {
     // Check if another account has this email
     const existingUser = await User.findOne({ email: cleanEmail, _id: { $ne: req.params.id } });
     if (existingUser) {
-      // If the duplicate is an old/dummy account, clear its email so this edit succeeds
-      if (existingUser.isDeleted || existingUser.status === 'INACTIVE' || existingUser.employeeId !== 'EMP001') {
-        await User.findByIdAndUpdate(existingUser._id, { email: `inactive_${Date.now()}_${cleanEmail}` });
+      // Only silently clear email if it's a soft-deleted account
+      if (existingUser.isDeleted) {
+        await User.findByIdAndUpdate(existingUser._id, { email: `deleted_${Date.now()}_${cleanEmail}` });
       } else {
         return next(new AppError(`The email '${cleanEmail}' is already assigned to ${existingUser.firstName} ${existingUser.lastName}.`, 400));
       }
