@@ -626,7 +626,7 @@ export const Login = () => {
                           type="text"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="e.g. Alban Santhosh"
+                          placeholder="Username"
                           className="w-full px-3 py-2 bg-transparent text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                           required
                         />
