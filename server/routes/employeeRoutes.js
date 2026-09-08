@@ -18,10 +18,10 @@ router.use(protect);
 router.get('/', getEmployees);
 router.get('/:id', getEmployeeById);
 router.post('/', restrictTo('CEO', 'ADMIN', 'HR'), createEmployee);
-router.put('/:id', restrictTo('CEO', 'ADMIN', 'HR'), updateEmployee);
-router.patch('/:id/status', restrictTo('CEO', 'ADMIN', 'HR'), toggleEmployeeStatus);
-router.delete('/:id', restrictTo('CEO', 'ADMIN', 'HR'), deleteEmployee);
-router.post('/:id/face-lock', restrictTo('CEO', 'ADMIN', 'HR'), registerFaceLock);
-router.delete('/:id/face-lock', restrictTo('CEO', 'ADMIN', 'HR'), removeFaceLock);
+router.put('/:id', restrictTo('CEO'), updateEmployee);
+router.patch('/:id/status', restrictTo('CEO'), toggleEmployeeStatus);
+router.delete('/:id', restrictTo('CEO'), deleteEmployee);
+router.post('/:id/face-lock', restrictTo('CEO'), registerFaceLock);
+router.delete('/:id/face-lock', restrictTo('CEO'), removeFaceLock);
 
 export default router;

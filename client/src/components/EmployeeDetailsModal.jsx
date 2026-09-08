@@ -35,12 +35,11 @@ export const EmployeeDetailsModal = ({
     password: ''
   });
 
-  const isManagement = ['CEO', 'ADMIN', 'HR'].includes(user?.role);
   const isLoggedInCEO = user?.role === 'CEO' || user?.email === 'ceo@enterprise.com' || user?.employeeId === 'EMP001';
   const isTargetCEO = employee?.role === 'CEO' || employee?.email === 'ceo@enterprise.com' || employee?.employeeId === 'EMP001';
   const isCEO = isLoggedInCEO;
-  const canManageFaceLock = isManagement;
-  const canManageEmployee = isManagement;
+  const canManageFaceLock = isCEO;
+  const canManageEmployee = isCEO;
 
   // Debug: Log props when modal opens
   useEffect(() => {
