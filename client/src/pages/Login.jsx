@@ -342,7 +342,7 @@ export const Login = () => {
                           Trouble Logging <span className="text-blue-600 dark:text-blue-400">In?</span>
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">
-                          Enter your corporate email or username and we'll send you a link to reset your password.
+                          Enter your username and we'll send you a link to reset your password.
                         </p>
                       </div>
 
@@ -363,7 +363,7 @@ export const Login = () => {
                             type="text"
                             value={resetEmail}
                             onChange={(e) => setResetEmail(e.target.value)}
-                            placeholder="Enter corporate email or username"
+                            placeholder="Enter your username"
                             className="w-full px-3 py-2.5 bg-transparent text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                             required
                           />
@@ -617,10 +617,10 @@ export const Login = () => {
 
                   {/* Real Production Login Form */}
                   <form onSubmit={handleSubmit} autoComplete="off" className="w-full space-y-3 text-left">
-                    {/* Input 1: Corporate Email / Username */}
+                    {/* Input 1: Username */}
                     <div>
                       <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-                        Corporate Email / Username *
+                        USERNAME *
                       </label>
                       <div className="flex items-center border border-blue-200/90 dark:border-slate-700 rounded-xl overflow-hidden shadow-2xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 bg-slate-50/50 dark:bg-slate-800/60 transition-all">
                         <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 text-white flex items-center justify-center shrink-0">
@@ -630,7 +630,7 @@ export const Login = () => {
                           type="text"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter corporate email or username"
+                          placeholder="Enter username"
                           className="w-full px-3 py-2 bg-transparent text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                           required
                         />
@@ -683,7 +683,7 @@ export const Login = () => {
                           )}
                         </button>
                         <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                          Remember Corporate Email
+                          Remember Username
                         </span>
                       </label>
                     </div>
