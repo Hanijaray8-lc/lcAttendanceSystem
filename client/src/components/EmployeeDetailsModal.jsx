@@ -474,7 +474,7 @@ export const EmployeeDetailsModal = ({
                   value={editForm.username}
                   onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                   className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
-                  placeholder="e.g. Alban Santhosh"
+                  placeholder="Enter username"
                   required
                 />
               </div>
@@ -486,7 +486,7 @@ export const EmployeeDetailsModal = ({
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                   className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
-                  placeholder="e.g. albansanthosh@enterprise.com"
+                  placeholder="Enter email address"
                 />
               </div>
             </div>
