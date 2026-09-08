@@ -50,6 +50,8 @@ export const login = asyncHandler(async (req, res, next) => {
 
     user = await User.findOne({
       $or: [
+        { username: lowerSearch },
+        { username: nameRegex },
         { email: lowerSearch },
         { employeeId: searchInput.toUpperCase() },
         { employeeId: searchInput },
@@ -239,6 +241,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 
   const user = await User.findOne({
     $or: [
+      { username: searchInput },
       { email: searchInput },
       { email: `${username}@enterprise.com` },
       { email: `${username}@lifechangersind.com` }
