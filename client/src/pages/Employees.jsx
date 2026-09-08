@@ -451,7 +451,7 @@ export const Employees = () => {
                         {emp.employmentType || 'Full Time'}
                       </span>
                       <span className={`font-black text-[11px] uppercase tracking-wider ${theme.roleColor}`}>
-                        {emp.role === 'TEAM_LEAD' ? 'Team Lead' : emp.role === 'ADMIN' ? 'Admin' : emp.role || 'Employee'}
+                        {emp.role === 'CEO' ? 'CEO' : emp.role === 'TEAM_LEAD' ? 'Team Lead' : emp.role === 'ADMIN' ? 'Admin' : emp.role === 'HR' ? 'HR' : emp.role || 'Employee'}
                       </span>
                     </div>
                   </div>
