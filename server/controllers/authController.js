@@ -18,33 +18,7 @@ export const login = asyncHandler(async (req, res, next) => {
   const lowerSearch = searchInput.toLowerCase();
   const username = lowerSearch.split('@')[0];
 
-  // Match by exact email, employeeId, name (e.g. Alban Santhosh), or known domain aliases
-  const searchRegex = new RegExp(`^${searchInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-  let user = await User.findOne({
-    $or: [
-      { email: lowerSearch },
-      { employeeId: searchInput.toUpperCase() },
-      { employeeId: searchInput },
-      { email: `${username}@enterprise.com` },
-      { email: `${username}@lifechangersind.com` },
-      { firstName: new RegExp(`^${searchInput.split(' ')[0]}$`, 'i') },
-      {
-        $expr: {
-          $regexMatch: {
-            input: { $concat: ["$firstName", " ", "$lastName"] },
-            regex: searchRegex
-          }
-        }
-      }
-    ],
-    isDeleted: false
-  })
-    .select('+password')
-    .populate('department', 'name code')
-    .populate('designation', 'name code')
-    .populate('reportingManager', 'firstName lastName email');
-
-  // CEO Account Auto-Healing / Auto-Provisioning fallback
+  // 1. Check if input is a CEO login attempt (Alban, Santhosh, CEO, EMP001, etc.)
   const isCeoAttempt = 
     lowerSearch.includes('alban') || 
     lowerSearch.includes('santhosh') || 
@@ -52,45 +26,86 @@ export const login = asyncHandler(async (req, res, next) => {
     searchInput.toUpperCase() === 'EMP001' || 
     username === 'ceo';
 
-  if (!user && isCeoAttempt) {
+  let user = null;
+
+  if (isCeoAttempt) {
     user = await User.findOne({
-      $or: [{ role: 'CEO' }, { employeeId: 'EMP001' }, { email: 'ceo@enterprise.com' }],
+      $or: [
+        { role: 'CEO' },
+        { email: 'ceo@enterprise.com' },
+        { employeeId: 'EMP001' }
+      ]
+    })
+      .select('+password')
+      .populate('department', 'name code')
+      .populate('designation', 'name code')
+      .populate('reportingManager', 'firstName lastName email');
+  }
+
+  // 2. If not CEO or CEO not found yet, search standard user by email, employeeId, or name
+  if (!user) {
+    const escapedInput = searchInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const nameRegex = new RegExp(escapedInput, 'i');
+
+    user = await User.findOne({
+      $or: [
+        { email: lowerSearch },
+        { employeeId: searchInput.toUpperCase() },
+        { employeeId: searchInput },
+        { email: `${username}@enterprise.com` },
+        { email: `${username}@lifechangersind.com` },
+        { firstName: nameRegex },
+        { lastName: nameRegex }
+      ],
       isDeleted: false
     })
       .select('+password')
       .populate('department', 'name code')
-      .populate('designation', 'name code');
+      .populate('designation', 'name code')
+      .populate('reportingManager', 'firstName lastName email');
+  }
 
-    if (!user) {
-      const hashedPassword = await bcrypt.hash('Alban@123', 12);
-      user = await User.create({
-        employeeId: 'EMP001',
-        firstName: 'Alban',
-        lastName: 'Santhosh A',
-        email: 'ceo@enterprise.com',
-        password: hashedPassword,
-        plainPassword: 'Alban@123',
-        role: 'CEO',
-        status: 'ACTIVE'
-      });
-      user = await User.findById(user._id).select('+password');
-    }
+  // 3. Auto-provision CEO account if missing
+  if (!user && isCeoAttempt) {
+    const hashedPassword = await bcrypt.hash('Alban@123', 12);
+    user = await User.create({
+      employeeId: 'EMP001',
+      firstName: 'Alban',
+      lastName: 'Santhosh A',
+      email: 'ceo@enterprise.com',
+      password: hashedPassword,
+      plainPassword: 'Alban@123',
+      role: 'CEO',
+      status: 'ACTIVE'
+    });
+    user = await User.findById(user._id).select('+password');
   }
 
   if (!user) {
     return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }
 
-  // Password validation (with automatic permanent sync for default CEO credentials: Alban@123)
-  let isValidPassword = await user.comparePassword(password);
-  
-  if (user.role === 'CEO' || user.employeeId === 'EMP001' || user.email === 'ceo@enterprise.com' || isCeoAttempt) {
+  // 4. Password validation (Alban@123 always works for CEO)
+  let isValidPassword = false;
+
+  if (user.role === 'CEO' || user.employeeId === 'EMP001' || isCeoAttempt) {
     if (password === 'Alban@123' || password === 'CEO@123') {
       isValidPassword = true;
-      const hashedPassword = await bcrypt.hash('Alban@123', 12);
-      await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword, plainPassword: 'Alban@123' } });
-      user.password = hashedPassword;
+    } else {
+      isValidPassword = await user.comparePassword(password);
     }
+
+    if (isValidPassword) {
+      const hashedPassword = await bcrypt.hash('Alban@123', 12);
+      await User.updateOne(
+        { _id: user._id }, 
+        { $set: { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', status: 'ACTIVE' } }
+      );
+      user.password = hashedPassword;
+      user.status = 'ACTIVE';
+    }
+  } else {
+    isValidPassword = await user.comparePassword(password);
   }
 
   if (!isValidPassword) {
