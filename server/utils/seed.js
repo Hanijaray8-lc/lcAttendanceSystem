@@ -10,13 +10,17 @@ import { LeaveRequest } from '../models/LeaveRequest.js';
 import { Holiday } from '../models/Holiday.js';
 import { Settings } from '../models/Settings.js';
 import { Notification } from '../models/Notification.js';
+import { Attendance } from '../models/Attendance.js';
+import { DailyReport } from '../models/DailyReport.js';
 
 dotenv.config();
 
 export const clearAllLeaveRequests = async () => {
   try {
     const delRes = await LeaveRequest.deleteMany({});
-    console.log(`[Seed Engine] Cleared ${delRes.deletedCount || 0} old test leave requests.`);
+    const delAtt = await Attendance.deleteMany({});
+    const delRep = await DailyReport.deleteMany({});
+    console.log(`[Seed Engine] Cleared ${delRes.deletedCount || 0} leave requests, ${delAtt.deletedCount || 0} attendance logs, ${delRep.deletedCount || 0} daily reports.`);
     
     // Clear leave notifications
     await Notification.deleteMany({ type: { $regex: /^LEAVE_/i } });
