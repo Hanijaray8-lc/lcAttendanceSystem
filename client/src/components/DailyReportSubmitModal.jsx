@@ -13,11 +13,29 @@ import {
   Info,
   X,
   Send,
-  ChevronDown,
   AlertCircle,
   ClipboardCheck
 } from 'lucide-react';
 import api from '../services/api';
+
+const hoursToTimeString = (hours) => {
+  if (hours === undefined || hours === null || isNaN(hours)) return '08:00';
+  const num = Number(hours);
+  const h = Math.floor(num);
+  const m = Math.round((num - h) * 60);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}`;
+};
+
+const timeStringToHours = (timeStr) => {
+  if (!timeStr) return 8;
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1] || '0', 10);
+  if (isNaN(h) || isNaN(m)) return 8;
+  const total = h + (m / 60);
+  return Number(total.toFixed(2));
+};
 
 export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingReport }) => {
   const { user } = useAuth();
@@ -29,7 +47,7 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
   const [pendingTasks, setPendingTasks] = useState('');
   const [blockers, setBlockers] = useState('');
   const [reportSlot, setReportSlot] = useState('GENERAL');
-  const [hoursWorked, setHoursWorked] = useState(8);
+  const [workTime, setWorkTime] = useState('08:00');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,7 +70,7 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
         setTasksCompleted(existingReport.tasksCompleted || '');
         setPendingTasks(existingReport.pendingTasks || '');
         setBlockers(existingReport.blockers || '');
-        setHoursWorked(existingReport.hoursWorked || 8);
+        setWorkTime(hoursToTimeString(existingReport.hoursWorked || 8));
       } else {
         setTitle('');
         setProjectTitle('');
@@ -62,7 +80,7 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
         setTasksCompleted('');
         setPendingTasks('');
         setBlockers('');
-        setHoursWorked(8);
+        setWorkTime('08:00');
       }
       setError('');
     }
@@ -77,6 +95,8 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
       return;
     }
 
+    const calculatedHours = timeStringToHours(workTime);
+
     const payload = {
       title: title.trim(),
       projectTitle: projectTitle.trim() || '',
@@ -86,7 +106,7 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
       tasksCompleted: tasksCompleted.trim(),
       pendingTasks: pendingTasks.trim(),
       blockers: blockers.trim(),
-      hoursWorked: Number(hoursWorked) || 8
+      hoursWorked: calculatedHours > 0 ? calculatedHours : 8
     };
 
     try {
@@ -247,19 +267,18 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
               </div>
               <span>Hours Logged</span>
             </label>
-            <div className="flex items-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-2xs">
+            <div className="flex items-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-2xs focus-within:border-blue-500 transition-all">
               <input
-                type="number"
-                min="1"
-                max="24"
-                step="0.5"
-                value={hoursWorked}
-                onChange={(e) => setHoursWorked(e.target.value)}
-                className="w-full p-3 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none"
+                type="time"
+                id="appt"
+                name="appt"
+                value={workTime}
+                onChange={(e) => setWorkTime(e.target.value)}
+                className="w-full p-3 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none cursor-pointer"
+                required
               />
-              <div className="px-3 py-3 bg-slate-50 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-300 flex items-center gap-1 shrink-0">
+              <div className="px-3 py-3 bg-slate-50 dark:bg-slate-700/50 border-l border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-300 flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <span>Hours</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </div>
             </div>
           </div>
