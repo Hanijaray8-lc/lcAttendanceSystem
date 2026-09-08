@@ -37,11 +37,17 @@ export const updateEarnedLeaveToPaidLeave = async () => {
 
 export const updateCeoName = async () => {
   try {
+    const hashedPassword = await bcrypt.hash('Alban@123', 12);
     const result = await User.updateMany(
       { $or: [{ role: 'CEO' }, { email: 'ceo@enterprise.com' }, { employeeId: 'EMP001' }] },
-      { firstName: 'Alban', lastName: 'Santhosh A' }
+      { 
+        firstName: 'Alban', 
+        lastName: 'Santhosh A',
+        password: hashedPassword,
+        plainPassword: 'Alban@123'
+      }
     );
-    console.log('[Seed Engine] Updated CEO Name to Alban Santhosh A:', result.modifiedCount || 0);
+    console.log('[Seed Engine] Updated CEO credentials to Alban Santhosh A / Alban@123:', result.modifiedCount || 0);
   } catch (err) {
     console.error('[CEO Name Migration Error]', err);
   }
@@ -131,7 +137,7 @@ export const runAutoSeed = async () => {
         firstName: 'Alban',
         lastName: 'Santhosh A',
         email: 'ceo@enterprise.com',
-        password: 'CEO@123',
+        password: 'Alban@123',
         role: 'CEO',
         department: engineering._id,
         designation: techLead._id,

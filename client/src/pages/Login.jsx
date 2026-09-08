@@ -63,9 +63,9 @@ export const Login = () => {
     e.preventDefault();
     setError('');
 
-    let finalEmail = email.trim();
-    if (!finalEmail) {
-      setError('Please enter your email or username.');
+    const usernameInput = email.trim();
+    if (!usernameInput) {
+      setError('Please enter your username.');
       return;
     }
 
@@ -74,17 +74,13 @@ export const Login = () => {
       return;
     }
 
-    if (!finalEmail.includes('@')) {
-      finalEmail = `${finalEmail}@enterprise.com`;
-    }
-
     setLoading(true);
 
     try {
-      await login(finalEmail, password);
+      await login(usernameInput, password);
 
       if (rememberMe) {
-        localStorage.setItem('lms_remembered_email', finalEmail);
+        localStorage.setItem('lms_remembered_email', usernameInput);
       } else {
         localStorage.removeItem('lms_remembered_email');
       }
@@ -630,7 +626,7 @@ export const Login = () => {
                           type="text"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter username"
+                          placeholder="e.g. Alban Santhosh"
                           className="w-full px-3 py-2 bg-transparent text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 outline-none"
                           required
                         />

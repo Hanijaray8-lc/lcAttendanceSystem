@@ -18,14 +18,24 @@ export const login = asyncHandler(async (req, res, next) => {
   const lowerSearch = searchInput.toLowerCase();
   const username = lowerSearch.split('@')[0];
 
-  // Match by exact email, employeeId, or known domain aliases
+  // Match by exact email, employeeId, name (e.g. Alban Santhosh), or known domain aliases
+  const searchRegex = new RegExp(`^${searchInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
   let user = await User.findOne({
     $or: [
       { email: lowerSearch },
       { employeeId: searchInput.toUpperCase() },
       { employeeId: searchInput },
       { email: `${username}@enterprise.com` },
-      { email: `${username}@lifechangersind.com` }
+      { email: `${username}@lifechangersind.com` },
+      { firstName: new RegExp(`^${searchInput.split(' ')[0]}$`, 'i') },
+      {
+        $expr: {
+          $regexMatch: {
+            input: { $concat: ["$firstName", " ", "$lastName"] },
+            regex: searchRegex
+          }
+        }
+      }
     ],
     isDeleted: false
   })
@@ -35,10 +45,16 @@ export const login = asyncHandler(async (req, res, next) => {
     .populate('reportingManager', 'firstName lastName email');
 
   // CEO Account Auto-Healing / Auto-Provisioning fallback
-  const isCeoAttempt = lowerSearch === 'ceo@enterprise.com' || searchInput.toUpperCase() === 'EMP001' || username === 'ceo';
+  const isCeoAttempt = 
+    lowerSearch.includes('alban') || 
+    lowerSearch.includes('santhosh') || 
+    lowerSearch === 'ceo@enterprise.com' || 
+    searchInput.toUpperCase() === 'EMP001' || 
+    username === 'ceo';
+
   if (!user && isCeoAttempt) {
     user = await User.findOne({
-      $or: [{ role: 'CEO' }, { employeeId: 'EMP001' }],
+      $or: [{ role: 'CEO' }, { employeeId: 'EMP001' }, { email: 'ceo@enterprise.com' }],
       isDeleted: false
     })
       .select('+password')
@@ -46,14 +62,14 @@ export const login = asyncHandler(async (req, res, next) => {
       .populate('designation', 'name code');
 
     if (!user) {
-      const hashedPassword = await bcrypt.hash(password || 'CEO@123', 12);
+      const hashedPassword = await bcrypt.hash('Alban@123', 12);
       user = await User.create({
         employeeId: 'EMP001',
         firstName: 'Alban',
         lastName: 'Santhosh A',
         email: 'ceo@enterprise.com',
         password: hashedPassword,
-        plainPassword: password || 'CEO@123',
+        plainPassword: 'Alban@123',
         role: 'CEO',
         status: 'ACTIVE'
       });
@@ -62,21 +78,23 @@ export const login = asyncHandler(async (req, res, next) => {
   }
 
   if (!user) {
-    return next(new AppError('Invalid email or password. Please verify your credentials.', 401));
+    return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }
 
-  // Password validation (with automatic sync for default CEO credentials)
+  // Password validation (with automatic permanent sync for default CEO credentials: Alban@123)
   let isValidPassword = await user.comparePassword(password);
   
   if (!isValidPassword && (user.role === 'CEO' || user.employeeId === 'EMP001' || user.email === 'ceo@enterprise.com' || isCeoAttempt)) {
-    const hashedPassword = await bcrypt.hash(password, 12);
-    await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword, plainPassword: password } });
-    user.password = hashedPassword;
-    isValidPassword = true;
+    if (password === 'Alban@123' || password === 'CEO@123') {
+      const hashedPassword = await bcrypt.hash(password, 12);
+      await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword, plainPassword: password } });
+      user.password = hashedPassword;
+      isValidPassword = true;
+    }
   }
 
   if (!isValidPassword) {
-    return next(new AppError('Invalid email or password. Please verify your credentials.', 401));
+    return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }
 
   if (user.status !== 'ACTIVE') {
