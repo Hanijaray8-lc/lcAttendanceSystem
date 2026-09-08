@@ -386,7 +386,7 @@ export const Departments = () => {
             {/* Department Name */}
             <div>
               <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
-                Department Name <span className="text-rose-500">*</span>
+                Department Name
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center border-r border-purple-100 dark:border-slate-700 text-purple-500 pointer-events-none">
@@ -398,7 +398,6 @@ export const Departments = () => {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Research & Development"
                   className="w-full pl-12 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                  required
                 />
               </div>
             </div>
@@ -406,7 +405,7 @@ export const Departments = () => {
             {/* Department Code */}
             <div>
               <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
-                Department Code <span className="text-rose-500">*</span>
+                Department Code
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center border-r border-purple-100 dark:border-slate-700 text-purple-500 font-extrabold text-sm pointer-events-none">
@@ -418,7 +417,6 @@ export const Departments = () => {
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   placeholder="e.g. RND"
                   className="w-full pl-12 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                  required
                 />
               </div>
             </div>

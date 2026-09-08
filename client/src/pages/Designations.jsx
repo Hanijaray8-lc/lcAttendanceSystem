@@ -262,7 +262,7 @@ export const Designations = () => {
           <form onSubmit={handleCreate} className="space-y-3.5">
             <div>
               <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
-                Designation Name <span className="text-rose-500">*</span>
+                Designation Name
               </label>
               <input
                 type="text"
@@ -270,13 +270,12 @@ export const Designations = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. Senior Full Stack Engineer"
                 className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                required
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
-                  Code <span className="text-rose-500">*</span>
+                  Code
                 </label>
                 <input
                   type="text"
@@ -284,18 +283,16 @@ export const Designations = () => {
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   placeholder="e.g. SFSE"
                   className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono"
-                  required
                 />
               </div>
               <div>
                 <label className="block text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-1.5">
-                  Department <span className="text-rose-500">*</span>
+                  Department
                 </label>
                 <select
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/80 border border-purple-200/80 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
-                  required
                 >
                   <option value="">Select Dept</option>
                   {departments.map((dept) => (
