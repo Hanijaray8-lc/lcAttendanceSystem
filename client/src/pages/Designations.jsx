@@ -113,12 +113,22 @@ export const Designations = () => {
       await api.delete(`/designations/${designationToDelete}`);
       setIsDeleteConfirmOpen(false);
       setDesignationToDelete(null);
+      setIsDetailsModalOpen(false);
       fetchData();
     } catch (err) {
       alert('Failed to delete designation.');
     } finally {
       setDeleteLoading(false);
     }
+  };
+
+  const handleEdit = async (id, data) => {
+    await api.put(`/designations/${id}`, data);
+    fetchData();
+    // Refresh selectedDesignation with updated data
+    const res = await api.get('/designations');
+    const updated = (res.data.data.designations || []).find(d => d._id === id);
+    if (updated) setSelectedDesignation(updated);
   };
 
   return (
@@ -226,6 +236,8 @@ export const Designations = () => {
         designation={selectedDesignation}
         currentUser={user}
         onDelete={handleDelete}
+        onEdit={handleEdit}
+        departments={departments}
       />
 
       {/* Add Designation Modal */}
