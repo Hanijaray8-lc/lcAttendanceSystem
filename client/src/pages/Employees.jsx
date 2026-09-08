@@ -176,10 +176,17 @@ export const Employees = () => {
       ]);
 
       const loadedEmps = empRes.data.data.employees || [];
+      const sortedEmps = [...loadedEmps].sort((a, b) => {
+        const isACeo = a.role === 'CEO' || a.employeeId === 'EMP001';
+        const isBCeo = b.role === 'CEO' || b.employeeId === 'EMP001';
+        if (isACeo && !isBCeo) return -1;
+        if (!isACeo && isBCeo) return 1;
+        return 0;
+      });
       const loadedDepts = deptRes.data.data.departments || [];
       const loadedDesigs = desigRes.data.data.designations || [];
 
-      setEmployees(loadedEmps);
+      setEmployees(sortedEmps);
       setDepartments(loadedDepts);
       setDesignations(loadedDesigs);
 
