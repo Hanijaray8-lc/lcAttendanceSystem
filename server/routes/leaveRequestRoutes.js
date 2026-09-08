@@ -6,7 +6,8 @@ import {
   approveLeave,
   rejectLeave,
   cancelLeave,
-  getLeaveBalances
+  getLeaveBalances,
+  clearAllLeaveRequestsAdmin
 } from '../controllers/leaveRequestController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.use(protect);
 
+router.delete('/clear-all', restrictTo('CEO', 'ADMIN', 'HR'), clearAllLeaveRequestsAdmin);
 router.get('/', getLeaveRequests);
 router.get('/balance', getLeaveBalances);
 router.get('/:id', getLeaveRequestById);

@@ -742,3 +742,30 @@ export const getLeaveBalances = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ status: 'success', data: { balance } });
 });
+
+export const clearAllLeaveRequestsAdmin = asyncHandler(async (req, res, next) => {
+  if (!['CEO', 'ADMIN', 'HR'].includes(req.user.role)) {
+    return next(new AppError('Only CEO, Admin, and HR can clear leave requests.', 403));
+  }
+
+  const result = await LeaveRequest.deleteMany({});
+  await Notification.deleteMany({ type: { $regex: /^LEAVE_/i } });
+
+  // Reset leave balances for all users
+  const balances = await LeaveBalance.find();
+  for (const bal of balances) {
+    if (bal.allocations) {
+      for (const alloc of bal.allocations) {
+        alloc.used = 0;
+        alloc.pending = 0;
+        alloc.remaining = alloc.total || 12;
+      }
+      await bal.save();
+    }
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: `Successfully cleared ${result.deletedCount || 0} test leave requests and reset balances.`
+  });
+});

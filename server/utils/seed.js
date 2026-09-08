@@ -9,8 +9,35 @@ import { LeaveBalance } from '../models/LeaveBalance.js';
 import { LeaveRequest } from '../models/LeaveRequest.js';
 import { Holiday } from '../models/Holiday.js';
 import { Settings } from '../models/Settings.js';
+import { Notification } from '../models/Notification.js';
 
 dotenv.config();
+
+export const clearAllLeaveRequests = async () => {
+  try {
+    const delRes = await LeaveRequest.deleteMany({});
+    console.log(`[Seed Engine] Cleared ${delRes.deletedCount || 0} old test leave requests.`);
+    
+    // Clear leave notifications
+    await Notification.deleteMany({ type: { $regex: /^LEAVE_/i } });
+
+    // Reset Leave Balances
+    const balances = await LeaveBalance.find();
+    for (const bal of balances) {
+      if (bal.allocations && bal.allocations.length > 0) {
+        for (const alloc of bal.allocations) {
+          alloc.used = 0;
+          alloc.pending = 0;
+          alloc.remaining = alloc.total || 12;
+        }
+        await bal.save();
+      }
+    }
+    console.log('[Seed Engine] Reset leave balances to 0 used / 0 pending.');
+  } catch (err) {
+    console.error('[Clean Leave Engine Error]', err);
+  }
+};
 
 export const updateEarnedLeaveToPaidLeave = async () => {
   try {
@@ -60,6 +87,7 @@ export const runAutoSeed = async () => {
   try {
     await updateEarnedLeaveToPaidLeave();
     await updateCeoName();
+    await clearAllLeaveRequests();
 
     const deptCount = await Department.countDocuments();
     if (deptCount > 0) {
