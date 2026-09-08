@@ -23,6 +23,8 @@ export const EmployeeDetailsModal = ({
   const [faceSubmitting, setFaceSubmitting] = useState(false);
   const [managers, setManagers] = useState([]);
   const [editForm, setEditForm] = useState({
+    username: '',
+    email: '',
     firstName: '',
     lastName: '',
     phone: '',
@@ -67,6 +69,8 @@ export const EmployeeDetailsModal = ({
   useEffect(() => {
     if (employee) {
       setEditForm({
+        username: employee.username || (employee.role === 'CEO' ? 'Alban Santhosh' : ''),
+        email: employee.email || '',
         firstName: employee.firstName || '',
         lastName: employee.lastName || '',
         phone: employee.phone || '',
@@ -462,6 +466,31 @@ export const EmployeeDetailsModal = ({
         ) : (
           /* Mode 2: Edit Form */
           <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Username *</label>
+                <input
+                  type="text"
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                  className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
+                  placeholder="e.g. Alban Santhosh"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
+                  placeholder="e.g. albansanthosh@enterprise.com"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Employee ID *</label>
               <input
