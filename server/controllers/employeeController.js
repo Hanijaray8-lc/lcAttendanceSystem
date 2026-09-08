@@ -65,6 +65,8 @@ export const getEmployees = asyncHandler(async (req, res, next) => {
       delete obj.plainPassword;
     }
     return obj;
+  });
+
   // Always pin CEO account to position #1 (first item)
   sanitizedEmployees.sort((a, b) => {
     const isACeo = a.role === 'CEO' || a.employeeId === 'EMP001';
