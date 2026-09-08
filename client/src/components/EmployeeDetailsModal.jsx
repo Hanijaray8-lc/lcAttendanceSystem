@@ -70,7 +70,7 @@ export const EmployeeDetailsModal = ({
     if (!empData) return;
     setEditForm({
       username: empData.username || (empData.role === 'CEO' ? 'Alban Santhosh' : ''),
-      email: empData.email || (empData.role === 'CEO' ? 'albansanthosh@enterprise.com' : ''),
+      email: empData.email || '',
       firstName: empData.firstName || '',
       lastName: empData.lastName || '',
       phone: empData.phone || '',

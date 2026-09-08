@@ -100,13 +100,12 @@ export const login = asyncHandler(async (req, res, next) => {
 
     if (isValidPassword) {
       const hashedPassword = await bcrypt.hash('Alban@123', 12);
-      await User.updateOne(
-        { _id: user._id }, 
-        { $set: { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', username: 'Alban Santhosh', email: 'albansanthosh@enterprise.com', status: 'ACTIVE' } }
-      );
+      const updateFields = { password: hashedPassword, plainPassword: 'Alban@123', firstName: 'Alban', lastName: 'Santhosh A', status: 'ACTIVE' };
+      if (!user.username) updateFields.username = 'Alban Santhosh';
+      if (!user.email) updateFields.email = 'albansanthosh@enterprise.com';
+
+      await User.updateOne({ _id: user._id }, { $set: updateFields });
       user.password = hashedPassword;
-      user.username = 'Alban Santhosh';
-      user.email = 'albansanthosh@enterprise.com';
       user.status = 'ACTIVE';
     }
   } else {

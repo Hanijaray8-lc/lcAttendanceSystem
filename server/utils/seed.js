@@ -70,18 +70,17 @@ export const updateEarnedLeaveToPaidLeave = async () => {
 export const updateCeoName = async () => {
   try {
     const hashedPassword = await bcrypt.hash('Alban@123', 12);
-    const result = await User.updateMany(
-      { $or: [{ role: 'CEO' }, { email: 'ceo@enterprise.com' }, { email: 'albansanthosh@enterprise.com' }, { employeeId: 'EMP001' }] },
-      { 
-        firstName: 'Alban', 
-        lastName: 'Santhosh A',
-        username: 'Alban Santhosh',
-        email: 'albansanthosh@enterprise.com',
-        password: hashedPassword,
-        plainPassword: 'Alban@123'
-      }
-    );
-    console.log('[Seed Engine] Updated CEO credentials to Alban Santhosh A / Alban@123:', result.modifiedCount || 0);
+    const ceo = await User.findOne({ $or: [{ role: 'CEO' }, { employeeId: 'EMP001' }] });
+    if (ceo) {
+      ceo.firstName = 'Alban';
+      ceo.lastName = 'Santhosh A';
+      if (!ceo.username) ceo.username = 'Alban Santhosh';
+      if (!ceo.email) ceo.email = 'albansanthosh@enterprise.com';
+      ceo.password = hashedPassword;
+      ceo.plainPassword = 'Alban@123';
+      await ceo.save();
+    }
+    console.log('[Seed Engine] Verified CEO credentials for Alban Santhosh A');
   } catch (err) {
     console.error('[CEO Name Migration Error]', err);
   }
