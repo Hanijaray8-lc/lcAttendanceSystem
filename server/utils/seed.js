@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import { Department } from '../models/Department.js';
 import { Designation } from '../models/Designation.js';
