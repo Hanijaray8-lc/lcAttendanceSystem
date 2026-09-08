@@ -35,10 +35,12 @@ export const EmployeeDetailsModal = ({
     password: ''
   });
 
+  const isManagement = ['CEO', 'ADMIN', 'HR'].includes(user?.role);
   const isLoggedInCEO = user?.role === 'CEO' || user?.email === 'ceo@enterprise.com' || user?.employeeId === 'EMP001';
   const isTargetCEO = employee?.role === 'CEO' || employee?.email === 'ceo@enterprise.com' || employee?.employeeId === 'EMP001';
   const isCEO = isLoggedInCEO;
-  const canManageFaceLock = isCEO;
+  const canManageFaceLock = isManagement;
+  const canManageEmployee = isManagement;
 
   // Debug: Log props when modal opens
   useEffect(() => {
@@ -394,8 +396,8 @@ export const EmployeeDetailsModal = ({
               </div>
             </div>
 
-            {/* Bottom Actions Row: Edit Button + Status Toggle + Delete (CEO Only) */}
-            {isCEO && (
+            {/* Bottom Actions Row: Edit Button + Status Toggle + Delete (CEO / Admin / HR Access) */}
+            {canManageEmployee && (
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"

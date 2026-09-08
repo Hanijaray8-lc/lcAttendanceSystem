@@ -220,8 +220,8 @@ export const Employees = () => {
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
-    if (user?.role !== 'CEO') {
-      alert('⚠️ Permission Denied: Only CEO can add or edit new employees.');
+    if (!['CEO', 'ADMIN', 'HR'].includes(user?.role)) {
+      alert('⚠️ Permission Denied: Only CEO, Admin, and HR can add new employees.');
       return;
     }
     try {
@@ -275,7 +275,7 @@ export const Employees = () => {
           <p className="text-xs sm:text-sm text-slate-500 font-medium">Manage workforce accounts, roles, and department assignments</p>
         </div>
 
-        {user?.role === 'CEO' && (
+        {['CEO', 'ADMIN', 'HR'].includes(user?.role) && (
           <button
             onClick={() => {
               setFormData({

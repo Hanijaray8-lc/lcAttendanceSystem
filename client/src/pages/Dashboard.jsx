@@ -539,8 +539,8 @@ export const Dashboard = () => {
               </button>
             )}
 
-            {/* Action 2: Add Employee (CEO Only) */}
-            {user?.role === 'CEO' && (
+            {/* Action 2: Add Employee (Management: CEO, Admin, HR) */}
+            {(user?.role === 'CEO' || user?.role === 'ADMIN' || user?.role === 'HR') && (
               <button
                 onClick={() => navigate('/employees?action=add')}
                 className="w-full p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 flex items-center justify-between group transition-all"
