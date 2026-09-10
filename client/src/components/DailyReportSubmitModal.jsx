@@ -39,6 +39,7 @@ const timeStringToHours = (timeStr) => {
 
 export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingReport }) => {
   const { user } = useAuth();
+  const isAdminOrHr = user?.role === 'ADMIN' || user?.role === 'HR';
   const [title, setTitle] = useState('');
   const [projectTitle, setProjectTitle] = useState('');
   const [moduleName, setModuleName] = useState('');
@@ -228,13 +229,13 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
               <div className="w-5 h-5 rounded-md bg-purple-100 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
                 <FileEdit className="w-3.5 h-3.5 stroke-[2.5]" />
               </div>
-              <span>Section 2: Type *</span>
+              <span>{isAdminOrHr ? 'Section 2: Type *' : 'Section 2: Module Name *'}</span>
             </label>
             <input
               type="text"
               value={moduleName}
               onChange={(e) => setModuleName(e.target.value)}
-              placeholder="Type"
+              placeholder={isAdminOrHr ? 'Type' : 'Module name'}
               className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-purple-500 transition-all shadow-2xs"
               required
             />
@@ -248,13 +249,13 @@ export const DailyReportSubmitModal = ({ isOpen, onClose, onSuccess, existingRep
               <div className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0">
                 <Target className="w-3.5 h-3.5 stroke-[2.5]" />
               </div>
-              <span>Changes *</span>
+              <span>{isAdminOrHr ? 'Changes *' : 'Report Title / Summary Focus *'}</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Changes"
+              placeholder={isAdminOrHr ? 'Changes' : "Today's work summary"}
               className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-purple-500 transition-all shadow-2xs"
               required
             />

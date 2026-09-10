@@ -385,7 +385,7 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
                   📁 Project: {currentReport.projectTitle || 'Attendance Project'}
                 </span>
                 <span className="px-3 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-xs font-black border border-purple-200 dark:border-purple-800">
-                  🏷️ Type: {currentReport.moduleName || 'General'}
+                  {(currentReport?.user?.role === 'ADMIN' || currentReport?.user?.role === 'HR') ? `🏷️ Type: ${currentReport.moduleName || 'General'}` : `🧩 Module: ${currentReport.moduleName || 'Employee Management'}`}
                 </span>
               </div>
 
@@ -408,7 +408,7 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-400">
-                    Changes / Report Focus
+                    {(currentReport?.user?.role === 'ADMIN' || currentReport?.user?.role === 'HR') ? 'Changes / Focus' : 'Report Focus / Title'}
                   </span>
                   <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
                     {currentReport.title}
