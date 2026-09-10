@@ -31,6 +31,7 @@ import {
   Eye,
   MoreVertical,
   CalendarCheck,
+  CalendarX,
   UserCheck,
   Search,
   LogIn,
@@ -1440,15 +1441,15 @@ export const Attendance = () => {
                     </div>
                   </div>
 
-                  {/* WFH / Remote Stat */}
-                  <div className="bg-[#eff6ff] dark:bg-blue-950/30 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between space-y-2">
-                    <Home className="w-5 h-5 text-[#2563eb] dark:text-blue-400 stroke-[2.2]" />
+                  {/* Absent Stat */}
+                  <div className="bg-[#fff1f2] dark:bg-rose-950/30 p-2.5 sm:p-3 rounded-xl flex flex-col justify-between space-y-2">
+                    <CalendarX className="w-5 h-5 text-[#e11d48] dark:text-rose-400 stroke-[2.2]" />
                     <div>
-                      <span className="text-xl sm:text-2xl font-black text-[#2563eb] dark:text-blue-400 block leading-none">
-                        {empGroup.wfhCount || 0}
+                      <span className="text-xl sm:text-2xl font-black text-[#e11d48] dark:text-rose-400 block leading-none">
+                        {empGroup.absentCount || 0}
                       </span>
-                      <span className="text-[11px] font-bold text-[#2563eb] dark:text-blue-400/90 block mt-1">
-                        WFH
+                      <span className="text-[11px] font-bold text-[#e11d48] dark:text-rose-400/90 block mt-1">
+                        Absent
                       </span>
                     </div>
                   </div>
