@@ -4,6 +4,9 @@ import { User } from '../models/User.js';
 import { LeaveBalance } from '../models/LeaveBalance.js';
 import { LeaveType } from '../models/LeaveType.js';
 import { Department } from '../models/Department.js';
+import { LeaveRequest } from '../models/LeaveRequest.js';
+import { Attendance } from '../models/Attendance.js';
+import { DailyReport } from '../models/DailyReport.js';
 import { AppError } from '../utils/appError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AuditLog } from '../models/AuditLog.js';
@@ -353,12 +356,56 @@ export const toggleEmployeeStatus = asyncHandler(async (req, res, next) => {
 });
 
 export const deleteEmployee = asyncHandler(async (req, res, next) => {
-  const employee = await User.findByIdAndUpdate(req.params.id, { isDeleted: true, status: 'INACTIVE' });
+  const employee = await User.findById(req.params.id);
   if (!employee) return next(new AppError('Employee not found.', 404));
+
+  // Safety protection: CEO account can never be deleted!
+  const isCEOAccount =
+    employee.role === 'CEO' ||
+    employee.email === 'albansanthosh@enterprise.com' ||
+    employee.email === 'ceo@enterprise.com' ||
+    employee.employeeId === 'EMP001';
+
+  if (isCEOAccount) {
+    return next(new AppError('The CEO account cannot be deleted.', 400));
+  }
+
+  // 1. Permanently delete user document from MongoDB
+  await User.findByIdAndDelete(req.params.id);
+
+  // 2. Cascade delete all associated user records in MongoDB
+  await Promise.all([
+    LeaveBalance.deleteMany({ user: req.params.id }),
+    LeaveRequest.deleteMany({ user: req.params.id }),
+    Attendance.deleteMany({ user: req.params.id }),
+    DailyReport.deleteMany({ user: req.params.id })
+  ]);
+
+  // 3. Clear reportingManager link for employees reporting to this user
+  await User.updateMany({ reportingManager: req.params.id }, { $unset: { reportingManager: 1 } });
+
+  // 4. If employee was part of a department, decrement employee count
+  if (employee.department) {
+    await Department.findByIdAndUpdate(employee.department, { $inc: { employeeCount: -1 } });
+  }
+
+  // 5. Create audit log
+  try {
+    await AuditLog.create({
+      user: req.user._id,
+      userName: `${req.user.firstName} ${req.user.lastName}`,
+      userRole: req.user.role,
+      action: 'EMPLOYEE_DELETE',
+      module: 'EMPLOYEE',
+      details: `Permanently deleted employee from MongoDB: ${employee.firstName} ${employee.lastName} (${employee.employeeId}, ${employee.email})`
+    });
+  } catch (err) {
+    // Ignore audit log error
+  }
 
   res.status(200).json({
     status: 'success',
-    message: 'Employee deactivated successfully.'
+    message: 'Employee permanently deleted from database.'
   });
 });
 
