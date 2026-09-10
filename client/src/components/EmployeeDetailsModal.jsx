@@ -38,10 +38,19 @@ export const EmployeeDetailsModal = ({
   });
 
   const isLoggedInCEO = user?.role === 'CEO' || user?.email === 'albansanthosh@enterprise.com' || user?.email === 'ceo@enterprise.com' || user?.employeeId === 'EMP001';
+  const isAdminOrHR = ['ADMIN', 'HR'].includes(user?.role);
   const isTargetCEO = employee?.role === 'CEO' || employee?.email === 'albansanthosh@enterprise.com' || employee?.email === 'ceo@enterprise.com' || employee?.employeeId === 'EMP001';
-  const isCEO = isLoggedInCEO;
-  const canManageFaceLock = isCEO;
-  const canManageEmployee = isCEO;
+  const isTargetEmployeeOrTL = employee?.role === 'EMPLOYEE' || employee?.role === 'TEAM_LEAD';
+
+  // Permissions:
+  // - CEO can edit anyone.
+  // - Admin and HR can edit ONLY Employee and Team Lead accounts (never CEO).
+  const canEditEmployee = isLoggedInCEO || (isAdminOrHR && !isTargetCEO && isTargetEmployeeOrTL);
+
+  // Strictly CEO only for Delete, Status toggle, and Face Lock
+  const canDeleteEmployee = isLoggedInCEO;
+  const canToggleStatus = isLoggedInCEO;
+  const canManageFaceLock = isLoggedInCEO;
 
   // Debug: Log props when modal opens
   useEffect(() => {
@@ -429,8 +438,8 @@ export const EmployeeDetailsModal = ({
               </div>
             </div>
 
-            {/* Bottom Actions Row: Edit Button + Status Toggle + Delete (CEO / Admin / HR Access) */}
-            {canManageEmployee && (
+            {/* Bottom Actions Row: Edit Button + Status Toggle + Delete */}
+            {canEditEmployee && (
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
@@ -443,38 +452,44 @@ export const EmployeeDetailsModal = ({
                   <Edit3 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Edit Employee Details
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={handleStatusClick}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-black text-white shadow-md transition-all flex items-center gap-2 cursor-pointer ${
-                      employee.status === 'ACTIVE'
-                        ? 'bg-amber-500 hover:bg-amber-600'
-                        : 'bg-emerald-600 hover:bg-emerald-700'
-                    }`}
-                  >
-                    {employee.status === 'ACTIVE' ? (
-                      <>
-                        <XCircle className="w-4 h-4" /> Deactivate Account
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4" /> Activate Account
-                      </>
+                {(canToggleStatus || canDeleteEmployee) && (
+                  <div className="flex items-center gap-2">
+                    {canToggleStatus && (
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={handleStatusClick}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-black text-white shadow-md transition-all flex items-center gap-2 cursor-pointer ${
+                          employee.status === 'ACTIVE'
+                            ? 'bg-amber-500 hover:bg-amber-600'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
+                      >
+                        {employee.status === 'ACTIVE' ? (
+                          <>
+                            <XCircle className="w-4 h-4" /> Deactivate Account
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4" /> Activate Account
+                          </>
+                        )}
+                      </button>
                     )}
-                  </button>
 
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={handleDeleteClick}
-                    className="px-4 py-2.5 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                    title="Delete Account"
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </button>
-                </div>
+                    {canDeleteEmployee && (
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={handleDeleteClick}
+                        className="px-4 py-2.5 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                        title="Delete Account"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -597,6 +612,15 @@ export const EmployeeDetailsModal = ({
                       <Lock className="w-3 h-3" /> Locked
                     </span>
                   </div>
+                ) : isAdminOrHR && !isLoggedInCEO ? (
+                  <select
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                    className="w-full p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none focus:border-primary"
+                  >
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="TEAM_LEAD">Team Lead</option>
+                  </select>
                 ) : (
                   <select
                     value={editForm.role}

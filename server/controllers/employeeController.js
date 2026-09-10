@@ -221,6 +221,31 @@ export const updateEmployee = asyncHandler(async (req, res, next) => {
     return next(new AppError('Employee not found.', 404));
   }
 
+  // Permission checks:
+  // CEO can edit anyone.
+  // Admin and HR can ONLY edit Employee and Team Lead accounts, and CANNOT edit CEO.
+  const isCallerCEO = req.user.role === 'CEO';
+  const isCallerAdminOrHR = ['ADMIN', 'HR'].includes(req.user.role);
+  const isTargetCEO = employee.role === 'CEO' || employee.email === 'ceo@enterprise.com' || employee.employeeId === 'EMP001';
+  const isTargetEmployeeOrTL = ['EMPLOYEE', 'TEAM_LEAD'].includes(employee.role);
+
+  if (!isCallerCEO) {
+    if (isCallerAdminOrHR) {
+      if (isTargetCEO) {
+        return next(new AppError('You do not have permission to edit CEO details.', 403));
+      }
+      if (!isTargetEmployeeOrTL) {
+        return next(new AppError('Admin and HR can only edit Employee and Team Lead accounts.', 403));
+      }
+      // If role is being changed by Admin/HR, it can only be EMPLOYEE or TEAM_LEAD
+      if (req.body.role && !['EMPLOYEE', 'TEAM_LEAD'].includes(req.body.role)) {
+        return next(new AppError('You can only assign Employee or Team Lead roles.', 403));
+      }
+    } else {
+      return next(new AppError('You do not have permission to edit employees.', 403));
+    }
+  }
+
   const updateData = { ...req.body };
 
   // Handle password separately
