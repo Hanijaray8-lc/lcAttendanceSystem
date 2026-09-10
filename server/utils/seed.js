@@ -17,9 +17,7 @@ dotenv.config();
 export const clearAllLeaveRequests = async () => {
   try {
     const delRes = await LeaveRequest.deleteMany({});
-    const delAtt = await Attendance.deleteMany({});
-    const delRep = await DailyReport.deleteMany({});
-    console.log(`[Seed Engine] Cleared ${delRes.deletedCount || 0} leave requests, ${delAtt.deletedCount || 0} attendance logs, ${delRep.deletedCount || 0} daily reports.`);
+    console.log(`[Seed Engine] Cleared ${delRes.deletedCount || 0} leave requests.`);
     
     // Clear leave notifications
     await Notification.deleteMany({ type: { $regex: /^LEAVE_/i } });
