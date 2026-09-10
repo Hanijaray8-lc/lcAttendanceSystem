@@ -155,20 +155,40 @@ export const Dashboard = () => {
   const [isEditDistributionModalOpen, setIsEditDistributionModalOpen] = useState(false);
   const [editDistributionData, setEditDistributionData] = useState([]);
   const [savingDistribution, setSavingDistribution] = useState(false);
+  const [upcomingHolidaysList, setUpcomingHolidaysList] = useState([]);
 
   const fetchDashboard = async (balanceYear) => {
     try {
       const year = balanceYear || selectedBalanceYear;
-      const [statsRes, leaveTypesRes, balanceRes, attendanceRes] = await Promise.all([
+      const currentYear = new Date().getFullYear();
+      const [statsRes, leaveTypesRes, balanceRes, attendanceRes, holidaysRes] = await Promise.all([
         api.get('/dashboard/stats', { params: { trendYear: selectedTrendYear } }),
         api.get('/leave-types'),
         api.get('/leaves/balance', { params: { year } }),
-        api.get('/attendance/today')
+        api.get('/attendance/today'),
+        api.get('/holidays', { params: { year: currentYear } }).catch(() => null)
       ]);
       setStats(statsRes.data.data);
       setLeaveTypes(leaveTypesRes.data.data.leaveTypes || []);
       setBalance(balanceRes.data.data.balance);
       setTodayAttendance(attendanceRes.data.data.attendance);
+
+      // Real active holidays from holidays API or dashboard stats
+      const rawHolidays = holidaysRes?.data?.data?.holidays || statsRes?.data?.data?.upcomingHolidays || [];
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      let upcoming = rawHolidays
+        .filter((h) => !h.isDeleted && h.status !== 'INACTIVE' && new Date(h.date) >= startOfToday)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Fallback: If no future holidays left in the year, display all active holidays sorted by date
+      if (upcoming.length === 0) {
+        upcoming = rawHolidays
+          .filter((h) => !h.isDeleted && h.status !== 'INACTIVE')
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
+      setUpcomingHolidaysList(upcoming.slice(0, 4));
     } catch (err) {
       console.error('[Dashboard Load Error]', err);
     } finally {
@@ -843,56 +863,59 @@ export const Dashboard = () => {
             </div>
 
             <div className="space-y-3">
-              {/* Holiday 1 */}
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="text-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl shadow-2xs">
-                    <p className="text-xs font-black text-slate-900 dark:text-white leading-none">15</p>
-                    <p className="text-[9px] font-bold text-blue-600 uppercase">AUG</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-900 dark:text-white">Independence Day</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Friday</p>
-                  </div>
+              {upcomingHolidaysList.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 dark:text-slate-500 text-xs font-medium bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <p>No upcoming holidays scheduled.</p>
                 </div>
-                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Upcoming
-                </span>
-              </div>
+              ) : (
+                upcomingHolidaysList.map((holiday) => {
+                  // Safe date parsing avoiding timezone shifts
+                  const dateStr = typeof holiday.date === 'string' ? holiday.date : new Date(holiday.date).toISOString();
+                  const parts = dateStr.split('T')[0].split('-');
+                  let dayNum = '01';
+                  let monthName = 'JAN';
+                  let weekdayName = 'Monday';
 
-              {/* Holiday 2 */}
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="text-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl shadow-2xs">
-                    <p className="text-xs font-black text-slate-900 dark:text-white leading-none">05</p>
-                    <p className="text-[9px] font-bold text-blue-600 uppercase">SEP</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-900 dark:text-white">Teachers' Day</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Friday</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Upcoming
-                </span>
-              </div>
+                  if (parts.length === 3) {
+                    const y = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10) - 1;
+                    const d = parseInt(parts[2], 10);
+                    const dt = new Date(y, m, d);
+                    dayNum = String(d).padStart(2, '0');
+                    monthName = dt.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+                    weekdayName = dt.toLocaleDateString('en-US', { weekday: 'long' });
+                  } else {
+                    const dt = new Date(holiday.date);
+                    dayNum = String(dt.getDate()).padStart(2, '0');
+                    monthName = dt.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+                    weekdayName = dt.toLocaleDateString('en-US', { weekday: 'long' });
+                  }
 
-              {/* Holiday 3 */}
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="text-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl shadow-2xs">
-                    <p className="text-xs font-black text-slate-900 dark:text-white leading-none">02</p>
-                    <p className="text-[9px] font-bold text-blue-600 uppercase">OCT</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-slate-900 dark:text-white">Gandhi Jayanti</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Thursday</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Upcoming
-                </span>
-              </div>
+                  return (
+                    <div
+                      key={holiday._id}
+                      onClick={() => navigate('/holidays')}
+                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="text-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-xl shadow-2xs group-hover:border-blue-400 transition-colors shrink-0">
+                          <p className="text-xs font-black text-slate-900 dark:text-white leading-none">{dayNum}</p>
+                          <p className="text-[9px] font-bold text-blue-600 uppercase">{monthName}</p>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors truncate">
+                            {holiday.name}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-medium truncate">{weekdayName}</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 ml-2">
+                        {holiday.type === 'NATIONAL' ? 'National' : holiday.type === 'OPTIONAL' ? 'Optional' : (holiday.type || 'Upcoming')}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

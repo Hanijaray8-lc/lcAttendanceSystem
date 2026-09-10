@@ -163,6 +163,25 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Fetch real upcoming active holidays from Holiday collection
+  let upcomingHolidays = await Holiday.find({
+    date: { $gte: today },
+    isDeleted: false,
+    status: 'ACTIVE'
+  })
+    .sort({ date: 1 })
+    .limit(5);
+
+  // Fallback: If no future holidays left in the year, show the upcoming/active holidays for this year
+  if (upcomingHolidays.length === 0) {
+    upcomingHolidays = await Holiday.find({
+      isDeleted: false,
+      status: 'ACTIVE'
+    })
+      .sort({ date: 1 })
+      .limit(5);
+  }
+
   if (['ADMIN', 'CEO'].includes(role)) {
     const [employeeDeptStats, leaveStats, leavesToday, monthlyTrend, recentActivities] = await Promise.all([
       Promise.all([
@@ -220,7 +239,8 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
         },
         leavesToday,
         monthlyTrend,
-        recentActivities
+        recentActivities,
+        upcomingHolidays
       }
     });
   } else if (role === 'HR') {
@@ -244,7 +264,8 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
         cards: { totalEmployees, pendingHrApprovals, holidayCount, newEmployees },
         recentRequests,
         monthlyTrend,
-        recentActivities
+        recentActivities,
+        upcomingHolidays
       }
     });
   } else if (role === 'TEAM_LEAD') {
@@ -269,17 +290,17 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
         cards: { teamCount, pendingRequests, approvedRequests, teamOnLeaveTodayCount: teamOnLeaveToday.length },
         teamOnLeaveToday,
         monthlyTrend,
-        recentActivities
+        recentActivities,
+        upcomingHolidays
       }
     });
   } else {
     // EMPLOYEE DASHBOARD
-    const [balance, pendingRequests, approvedLeaves, rejectedLeaves, upcomingHolidays, recentLeaves, monthlyTrend, recentActivities] = await Promise.all([
+    const [balance, pendingRequests, approvedLeaves, rejectedLeaves, recentLeaves, monthlyTrend, recentActivities] = await Promise.all([
       LeaveBalance.findOne({ user: userId, year: new Date().getFullYear() }).populate('allocations.leaveType'),
       LeaveRequest.countDocuments({ user: userId, status: { $in: ['PENDING', 'TEAM_LEAD_APPROVED', 'ESCALATED_TO_HR'] }, isDeleted: false }),
       LeaveRequest.countDocuments({ user: userId, status: { $in: ['HR_APPROVED', 'ADMIN_APPROVED', 'CEO_APPROVED'] }, isDeleted: false }),
       LeaveRequest.countDocuments({ user: userId, status: { $in: ['TEAM_LEAD_REJECTED', 'HR_REJECTED', 'ADMIN_REJECTED', 'CEO_REJECTED'] }, isDeleted: false }),
-      Holiday.find({ date: { $gte: today }, isDeleted: false, status: 'ACTIVE' }).sort({ date: 1 }).limit(5),
       LeaveRequest.find({ user: userId, isDeleted: false }).populate('leaveType', 'name colorBadge').sort({ createdAt: -1 }).limit(5),
       buildMonthlyTrend({ user: userId }, trendYear),
       fetchRecentActivities({ user: userId }, 5)
