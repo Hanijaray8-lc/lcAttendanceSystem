@@ -146,10 +146,27 @@ const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
 app.use(express.static(clientDistPath));
 
 // Health Check API
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  let dbName = mongoose.connection?.name || 'disconnected';
+  let host = mongoose.connection?.host || 'none';
+  let counts = {};
+  try {
+    if (mongoose.connection?.readyState === 1 && mongoose.connection?.db) {
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      for (const c of collections) {
+        counts[c.name] = await mongoose.connection.db.collection(c.name).countDocuments();
+      }
+    }
+  } catch (e) {
+    counts = { error: e.message };
+  }
+
   res.status(200).json({
     status: 'success',
     service: 'Enterprise Life Changers Management (ELCM) API',
+    database: dbName,
+    host,
+    counts,
     timestamp: new Date().toISOString()
   });
 });
