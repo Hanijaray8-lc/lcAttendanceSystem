@@ -57,7 +57,13 @@ export const getTodayReportStatus = asyncHandler(async (req, res, next) => {
   const reports = await DailyReport.find({
     user: userId,
     date: { $gte: start, $lte: end }
-  }).sort({ date: -1 });
+  })
+    .populate('reviewedBy', 'firstName lastName role')
+    .populate({
+      path: 'comments.user',
+      select: 'firstName lastName role profileImage'
+    })
+    .sort({ date: -1 });
 
   res.status(200).json({
     status: 'success',
@@ -145,6 +151,10 @@ export const getDailyReports = asyncHandler(async (req, res, next) => {
       populate: { path: 'department', select: 'name code' }
     })
     .populate('reviewedBy', 'firstName lastName role')
+    .populate({
+      path: 'comments.user',
+      select: 'firstName lastName role profileImage'
+    })
     .sort({ date: -1, createdAt: -1 });
 
   // Map user ID to their array of reports
@@ -220,6 +230,10 @@ export const getEmployeeReportHistory = asyncHandler(async (req, res, next) => {
 
   const reports = await DailyReport.find({ user: userId })
     .populate('reviewedBy', 'firstName lastName role')
+    .populate({
+      path: 'comments.user',
+      select: 'firstName lastName role profileImage'
+    })
     .sort({ date: -1 });
 
   const totalSubmitted = reports.length;
@@ -250,13 +264,36 @@ export const reviewDailyReport = asyncHandler(async (req, res, next) => {
     return next(new AppError('Daily report not found.', 404));
   }
 
-  if (feedback !== undefined) report.feedback = feedback.trim();
+  // Preserve all comments in sequence without overwriting
+  if (feedback && feedback.trim()) {
+    report.comments.push({
+      user: req.user._id,
+      comment: feedback.trim(),
+      status: status || report.status || 'REVIEWED',
+      createdAt: new Date()
+    });
+    report.feedback = feedback.trim();
+  }
+
   if (status) report.status = status;
 
   report.reviewedBy = req.user._id;
   report.reviewedAt = new Date();
 
   await report.save();
+
+  // Populate user and comment authors to return updated data immediately
+  const updatedReport = await DailyReport.findById(id)
+    .populate({
+      path: 'user',
+      select: 'firstName lastName employeeId department role email profileImage',
+      populate: { path: 'department', select: 'name code' }
+    })
+    .populate('reviewedBy', 'firstName lastName role')
+    .populate({
+      path: 'comments.user',
+      select: 'firstName lastName role profileImage'
+    });
 
   // Send real-time notification to the employee about the feedback
   try {
@@ -275,7 +312,60 @@ export const reviewDailyReport = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    data: { report }
+    data: { report: updatedReport }
+  });
+});
+
+// Delete a specific comment on a Daily Report
+export const deleteDailyReportComment = asyncHandler(async (req, res, next) => {
+  const { id, commentId } = req.params;
+
+  const report = await DailyReport.findById(id);
+  if (!report) {
+    return next(new AppError('Daily report not found.', 404));
+  }
+
+  const comment = report.comments.id(commentId);
+  if (!comment) {
+    return next(new AppError('Comment not found.', 404));
+  }
+
+  const isAuthor = comment.user.toString() === req.user._id.toString();
+  const isAdminOrCEO = ['ADMIN', 'CEO'].includes(req.user.role);
+
+  if (!isAuthor && !isAdminOrCEO) {
+    return next(new AppError('You can only delete your own comments.', 403));
+  }
+
+  report.comments.pull(commentId);
+
+  // Sync fallback feedback
+  if (report.comments.length > 0) {
+    const lastComment = report.comments[report.comments.length - 1];
+    report.feedback = lastComment.comment;
+    report.reviewedBy = lastComment.user;
+  } else {
+    report.feedback = '';
+  }
+
+  await report.save();
+
+  const updatedReport = await DailyReport.findById(id)
+    .populate({
+      path: 'user',
+      select: 'firstName lastName employeeId department role email profileImage',
+      populate: { path: 'department', select: 'name code' }
+    })
+    .populate('reviewedBy', 'firstName lastName role')
+    .populate({
+      path: 'comments.user',
+      select: 'firstName lastName role profileImage'
+    });
+
+  res.status(200).json({
+    status: 'success',
+    data: { report: updatedReport },
+    message: 'Comment deleted successfully.'
   });
 });
 

@@ -7,7 +7,8 @@ import {
   updateDailyReport,
   deleteDailyReport,
   sendDailyReportReminder,
-  getEmployeeReportHistory
+  getEmployeeReportHistory,
+  deleteDailyReportComment
 } from '../controllers/dailyReportController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 
@@ -22,6 +23,7 @@ router.get('/history/:userId', getEmployeeReportHistory);
 router.get('/', getDailyReports);
 router.put('/:id', updateDailyReport);
 router.patch('/:id', restrictTo('ADMIN', 'HR', 'CEO', 'TEAM_LEAD'), reviewDailyReport);
+router.delete('/:id/comments/:commentId', restrictTo('ADMIN', 'HR', 'CEO', 'TEAM_LEAD'), deleteDailyReportComment);
 router.delete('/:id', deleteDailyReport);
 
 export default router;

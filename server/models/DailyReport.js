@@ -70,7 +70,30 @@ const dailyReportSchema = new mongoose.Schema(
     },
     reviewedAt: {
       type: Date
-    }
+    },
+    comments: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        comment: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        status: {
+          type: String,
+          enum: ['SUBMITTED', 'REVIEWED', 'APPROVED'],
+          default: 'REVIEWED'
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ]
   },
   {
     timestamps: true

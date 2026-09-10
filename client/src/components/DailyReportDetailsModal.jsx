@@ -47,7 +47,7 @@ export const DailyReportDetailsModal = ({
   const [reportsGroup, setReportsGroup] = React.useState(
     initialReportsList && initialReportsList.length ? initialReportsList : (initialReport ? [initialReport] : [])
   );
-  const [feedback, setFeedback] = useState(initialReport?.feedback || '');
+  const [newComment, setNewComment] = useState('');
   const [reviewStatus, setReviewStatus] = useState(initialReport?.status || 'REVIEWED');
   const [submitting, setSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -58,7 +58,7 @@ export const DailyReportDetailsModal = ({
     setCurrentReport(initialReport);
     const list = (initialReportsList && initialReportsList.length) ? initialReportsList : (initialReport ? [initialReport] : []);
     setReportsGroup(list);
-    setFeedback(initialReport?.feedback || '');
+    setNewComment('');
     setReviewStatus(initialReport?.status || 'REVIEWED');
   }, [initialReport, initialReportsList]);
 
@@ -70,26 +70,67 @@ export const DailyReportDetailsModal = ({
   const isOwner = reportUserId && currentUserId && reportUserId === currentUserId;
   const canModify = isOwner;
 
+  // Build comments list: prefer comments array, fallback to legacy feedback
+  const commentsList = (() => {
+    if (currentReport?.comments && currentReport.comments.length > 0) {
+      return currentReport.comments;
+    }
+    if (currentReport?.feedback && currentReport.feedback.trim()) {
+      return [
+        {
+          _id: 'legacy_review',
+          user: currentReport.reviewedBy,
+          comment: currentReport.feedback,
+          status: currentReport.status || 'REVIEWED',
+          createdAt: currentReport.reviewedAt || currentReport.updatedAt || currentReport.date
+        }
+      ];
+    }
+    return [];
+  })();
+
   const handleSelectReportFromGroup = (rep) => {
     setCurrentReport(rep);
-    setFeedback(rep?.feedback || '');
+    setNewComment('');
     setReviewStatus(rep?.status || 'REVIEWED');
   };
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
+    if (!newComment.trim() && !reviewStatus) return;
     try {
       setSubmitting(true);
-      await api.patch(`/daily-reports/${currentReport._id}`, {
-        feedback: feedback.trim(),
+      const res = await api.patch(`/daily-reports/${currentReport._id}`, {
+        feedback: newComment.trim(),
         status: reviewStatus
       });
+      setNewComment('');
+      if (res.data?.data?.report) {
+        const updated = res.data.data.report;
+        setCurrentReport(updated);
+        setReportsGroup(prev => prev.map(r => r._id === updated._id ? updated : r));
+      }
       onUpdateSuccess();
-      onClose();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit review');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!commentId || commentId === 'legacy_review') return;
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    try {
+      const res = await api.delete(`/daily-reports/${currentReport._id}/comments/${commentId}`);
+      if (res.data?.data?.report) {
+        const updated = res.data.data.report;
+        setCurrentReport(updated);
+        setReportsGroup(prev => prev.map(r => r._id === updated._id ? updated : r));
+      }
+      onUpdateSuccess();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete comment');
     }
   };
 
@@ -126,7 +167,7 @@ export const DailyReportDetailsModal = ({
       if (matchingReports.length > 0) {
         setReportsGroup(matchingReports);
         setCurrentReport(matchingReports[0]);
-        setFeedback(matchingReports[0].feedback || '');
+        setNewComment('');
         setReviewStatus(matchingReports[0].status || 'REVIEWED');
       } else {
         alert('No report found for ' + selectedDate);
@@ -146,6 +187,24 @@ export const DailyReportDetailsModal = ({
       day: 'numeric',
       year: 'numeric'
     });
+
+    const roleNameMap = {
+      CEO: 'CEO',
+      TEAM_LEAD: 'Team Lead',
+      HR: 'HR Manager',
+      ADMIN: 'Admin',
+      EMPLOYEE: 'Employee'
+    };
+
+    let commentsFormatted = 'No reviewer feedback yet.';
+    if (commentsList.length > 0) {
+      commentsFormatted = commentsList.map((c, idx) => {
+        const commenterName = `${c.user?.firstName || 'Reviewer'} ${c.user?.lastName || ''}`.trim();
+        const commenterRole = roleNameMap[c.user?.role] || c.user?.role || 'Reviewer';
+        const commentDate = new Date(c.createdAt || currentReport.date).toLocaleString('en-US');
+        return `[#${idx + 1}] Comment by: ${commenterName} (${commenterRole})\nStatus: ${c.status || 'REVIEWED'} | Date: ${commentDate}\n"${c.comment || c.feedback || ''}"`;
+      }).join('\n\n------------------------------------------------------------------------\n');
+    }
 
     const content = `========================================================================
              LIFE CHANGERS IND - DAILY WORK REPORT (DWR)
@@ -176,9 +235,9 @@ BLOCKERS / CHALLENGES:
 ------------------------------------------------------------------------
 ${currentReport.blockers || 'None reported'}
 
-REVIEWER FEEDBACK:
+REVIEWER COMMENTS & FEEDBACK HISTORY:
 ------------------------------------------------------------------------
-${currentReport.feedback ? `"${currentReport.feedback}"` : 'No reviewer feedback yet.'}
+${commentsFormatted}
 
 ========================================================================
 Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
@@ -433,31 +492,142 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
             </div>
           </div>
 
-          {/* Feedback Section */}
-          {currentReport.feedback && (
-            <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/60 space-y-1">
-              <div className="flex items-center justify-between text-indigo-700 dark:text-indigo-300 text-xs font-black">
-                <span className="flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5" /> Reviewer Feedback
-                </span>
-                {currentReport.reviewedBy && (
-                  <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-100/70 dark:bg-indigo-900/50 px-2.5 py-0.5 rounded-full">
-                    By {currentReport.reviewedBy.firstName || 'User'} {currentReport.reviewedBy.lastName || ''} ({currentReport.reviewedBy.role === 'CEO' ? 'CEO Executive' : currentReport.reviewedBy.role === 'TEAM_LEAD' ? 'TEAM_LEAD' : currentReport.reviewedBy.role === 'HR' ? 'HR Manager' : 'Admin'})
-                  </span>
-                )}
+          {/* Reviewer Comments & Feedback History Section */}
+          <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <MessageSquare className="w-3.5 h-3.5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    Reviewer Comments & Feedback History
+                  </h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                    All comments from Team Lead, HR, Admin, and CEO
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-700 dark:text-slate-300 font-medium italic mt-1">
-                "{currentReport.feedback}"
-              </p>
+              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-indigo-100/80 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                {commentsList.length} {commentsList.length === 1 ? 'Comment' : 'Comments'}
+              </span>
             </div>
-          )}
+
+            {/* Comments List */}
+            {commentsList.length === 0 ? (
+              <div className="py-3 text-center text-slate-400 text-xs font-medium bg-white/60 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                No reviewer comments yet. Managers can add feedback below.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {commentsList.map((c, index) => {
+                  const commenter = c.user;
+                  const commenterName = commenter
+                    ? `${commenter.firstName || ''} ${commenter.lastName || ''}`.trim() || 'Reviewer'
+                    : 'Reviewer';
+                  const role = commenter?.role || 'REVIEWER';
+                  const isAuthor = commenter?._id && currentUser?._id && commenter._id.toString() === currentUser._id.toString();
+                  const canDeleteComment = isAuthor || ['ADMIN', 'CEO'].includes(currentUser?.role);
+
+                  // Role badge config
+                  const roleBadgeConfig = {
+                    CEO: {
+                      name: 'CEO',
+                      cls: 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                    },
+                    TEAM_LEAD: {
+                      name: 'Team Lead',
+                      cls: 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                    },
+                    HR: {
+                      name: 'HR Manager',
+                      cls: 'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+                    },
+                    ADMIN: {
+                      name: 'Admin',
+                      cls: 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300 dark:border-rose-700'
+                    }
+                  };
+                  const rConfig = roleBadgeConfig[role] || {
+                    name: role,
+                    cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  };
+
+                  const formattedTime = c.createdAt
+                    ? new Date(c.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })
+                    : '';
+
+                  return (
+                    <div
+                      key={c._id || index}
+                      className="p-3.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-700/80 shadow-2xs space-y-2 relative group"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2.5">
+                          <UserAvatar user={commenter} size="w-7 h-7 text-[10px] shrink-0" />
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                              {commenterName}
+                            </span>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${rConfig.cls}`}>
+                              {rConfig.name}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {c.status && (
+                            <span
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                                c.status === 'APPROVED'
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                              }`}
+                            >
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              {c.status}
+                            </span>
+                          )}
+                          {formattedTime && (
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              {formattedTime}
+                            </span>
+                          )}
+                          {canDeleteComment && c._id !== 'legacy_review' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(c._id)}
+                              title="Delete this comment"
+                              className="text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors p-0.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 pl-9 whitespace-pre-line leading-relaxed">
+                        "{c.comment || c.feedback}"
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Review Form for Manager / HR / CEO */}
           {isReviewer && (
             <form onSubmit={handleReviewSubmit} className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                  Add Manager Review / Feedback
+                  Add Your Review / Comment ({currentUser?.role === 'CEO' ? 'CEO' : currentUser?.role === 'TEAM_LEAD' ? 'Team Lead' : currentUser?.role === 'HR' ? 'HR' : 'Admin'})
                 </label>
                 <div className="flex items-center gap-2">
                   <button
@@ -482,21 +652,21 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
               </div>
 
               <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
                 rows="2"
-                placeholder="Good progress on daily tasks. Approved."
+                placeholder="Write your review / feedback comment here..."
                 className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
               />
 
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !newComment.trim()}
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>{submitting ? 'Saving...' : 'Save Review'}</span>
+                  <span>{submitting ? 'Posting...' : 'Post Comment / Save Review'}</span>
                 </button>
               </div>
             </form>

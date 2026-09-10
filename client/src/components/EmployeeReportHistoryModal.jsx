@@ -244,11 +244,41 @@ export const EmployeeReportHistoryModal = ({ isOpen, onClose, userId, onSelectRe
                                   <p className="text-[11px] text-rose-600 dark:text-rose-300 font-semibold mt-0.5">{r.blockers}</p>
                                 </div>
                               )}
-                              {r.feedback && (
-                                <div className="flex items-start gap-2 text-[11px]">
-                                  <MessageSquare className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                                  <span className="font-bold text-slate-600 dark:text-slate-300">Feedback: </span>
-                                  <span className="text-blue-600 dark:text-blue-400 italic">"{r.feedback}"</span>
+                              {/* Comments Thread */}
+                              {((r.comments && r.comments.length > 0) || r.feedback) && (
+                                <div className="mt-2 pt-2 border-t border-blue-100 dark:border-blue-900/30 space-y-1.5">
+                                  <p className="text-[10px] font-black uppercase text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                                    <MessageSquare className="w-3 h-3 text-indigo-500" />
+                                    Reviewer Comments ({r.comments?.length || (r.feedback ? 1 : 0)}):
+                                  </p>
+                                  {r.comments && r.comments.length > 0 ? (
+                                    r.comments.map((c, cIdx) => {
+                                      const cUser = c.user;
+                                      const cName = cUser ? `${cUser.firstName || ''} ${cUser.lastName || ''}`.trim() : 'Reviewer';
+                                      const cRole = cUser?.role === 'CEO' ? 'CEO' : cUser?.role === 'TEAM_LEAD' ? 'Team Lead' : cUser?.role === 'HR' ? 'HR' : cUser?.role === 'ADMIN' ? 'Admin' : (cUser?.role || 'Reviewer');
+                                      return (
+                                        <div key={c._id || cIdx} className="p-2 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-[11px] space-y-0.5">
+                                          <div className="flex items-center justify-between text-[10px]">
+                                            <span className="font-extrabold text-slate-900 dark:text-white">
+                                              {cName} <span className="font-semibold text-indigo-600 dark:text-indigo-400">({cRole})</span>
+                                            </span>
+                                            {c.createdAt && (
+                                              <span className="text-slate-400 font-medium">
+                                                {new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <p className="text-slate-600 dark:text-slate-300 italic font-medium">
+                                            "{c.comment || c.feedback}"
+                                          </p>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="p-2 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-[11px]">
+                                      <p className="text-blue-600 dark:text-blue-400 italic">"{r.feedback}"</p>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               {onSelectReport && (
