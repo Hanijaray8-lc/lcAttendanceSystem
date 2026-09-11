@@ -325,86 +325,177 @@ export const DailyReports = () => {
 
       {/* 3 Metric Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Total Tracked Employees Card */}
-        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-blue-100/80 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
-          <div className="flex items-center gap-5 z-10">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/25 ring-4 ring-blue-50 dark:ring-blue-950/40 group-hover:rotate-3 transition-transform duration-300">
-              <Users className="w-7 h-7 stroke-[2]" />
-            </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
-                TOTAL EMPLOYEES
-              </span>
-              <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
-                {totalTrackedCount}
-              </h3>
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
-                Tracked Team Members
-              </span>
-            </div>
-          </div>
+        {user?.role === 'EMPLOYEE' ? (
+          <>
+            {/* Employee Card 1: My Submissions */}
+            <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-blue-100/80 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
+              <div className="flex items-center gap-5 z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/25 ring-4 ring-blue-50 dark:ring-blue-950/40 group-hover:rotate-3 transition-transform duration-300">
+                  <FileText className="w-7 h-7 stroke-[2]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    MY REPORTS TODAY
+                  </span>
+                  <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {reports.length}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                    {reports.length === 1 ? '1 Report Submitted' : `${reports.length} Reports Submitted`}
+                  </span>
+                </div>
+              </div>
 
-          <div className="self-start z-10 hidden sm:block">
-            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100/80 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              Live
-            </span>
-          </div>
-        </div>
-
-        {/* Reviewed / Approved Card */}
-        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-emerald-100/80 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
-          <div className="flex items-center gap-5 z-10">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/25 ring-4 ring-emerald-50 dark:ring-emerald-950/40 group-hover:rotate-3 transition-transform duration-300">
-              <UserCheck className="w-7 h-7 stroke-[2]" />
+              <div className="self-start z-10 hidden sm:block">
+                <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                  reports.length > 0
+                    ? 'bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80'
+                    : 'bg-amber-100/80 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80'
+                } shadow-2xs flex items-center gap-1.5`}>
+                  <span className={`w-2 h-2 rounded-full ${reports.length > 0 ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+                  {reports.length > 0 ? 'Submitted' : 'Pending'}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
-                REVIEWED / APPROVED
-              </span>
-              <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
-                {reviewedCount}
-              </h3>
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
-                Reports Approved
-              </span>
-            </div>
-          </div>
 
-          <div className="self-start z-10 hidden sm:block">
-            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
-              {totalTrackedCount > 0 ? Math.round((reviewedCount / totalTrackedCount) * 100) : 0}% Done
-            </span>
-          </div>
-        </div>
+            {/* Employee Card 2: Approved Reports */}
+            <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-emerald-100/80 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
+              <div className="flex items-center gap-5 z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/25 ring-4 ring-emerald-50 dark:ring-emerald-950/40 group-hover:rotate-3 transition-transform duration-300">
+                  <UserCheck className="w-7 h-7 stroke-[2]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    REVIEWED & APPROVED
+                  </span>
+                  <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {reviewedCount}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Approved by Manager
+                  </span>
+                </div>
+              </div>
 
-        {/* Pending / Not Submitted Card */}
-        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-amber-100/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
-          <div className="flex items-center gap-5 z-10">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25 ring-4 ring-amber-50 dark:ring-amber-950/40 group-hover:rotate-3 transition-transform duration-300">
-              <AlertTriangle className="w-7 h-7 stroke-[2]" />
+              <div className="self-start z-10 hidden sm:block">
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+                  {reports.length > 0 ? Math.round((reviewedCount / reports.length) * 100) : 0}% Approved
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
-                PENDING SUBMISSION
-              </span>
-              <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
-                {pendingSubmissionCount}
-              </h3>
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
-                Awaiting Submission
-              </span>
-            </div>
-          </div>
 
-          <div className="self-start z-10 hidden sm:block">
-            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100/80 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 shadow-2xs flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
-              {totalTrackedCount > 0 ? Math.round((pendingSubmissionCount / totalTrackedCount) * 100) : 0}% Pending
-            </span>
-          </div>
-        </div>
+            {/* Employee Card 3: Hours Logged */}
+            <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-amber-100/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
+              <div className="flex items-center gap-5 z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25 ring-4 ring-amber-50 dark:ring-amber-950/40 group-hover:rotate-3 transition-transform duration-300">
+                  <Clock className="w-7 h-7 stroke-[2]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    TOTAL HOURS LOGGED
+                  </span>
+                  <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {reports.reduce((sum, r) => sum + (Number(r.hoursWorked) || 0), 0)} <span className="text-lg font-bold text-slate-400">hrs</span>
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Work Logged Today
+                  </span>
+                </div>
+              </div>
+
+              <div className="self-start z-10 hidden sm:block">
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100/80 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 shadow-2xs flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
+                  Logged
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Manager/Admin Card 1: Total Tracked Employees */}
+            <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-blue-100/80 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
+              <div className="flex items-center gap-5 z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/25 ring-4 ring-blue-50 dark:ring-blue-950/40 group-hover:rotate-3 transition-transform duration-300">
+                  <Users className="w-7 h-7 stroke-[2]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    TOTAL EMPLOYEES
+                  </span>
+                  <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {totalTrackedCount}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Tracked Team Members
+                  </span>
+                </div>
+              </div>
+
+              <div className="self-start z-10 hidden sm:block">
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100/80 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  Live
+                </span>
+              </div>
+            </div>
+
+            {/* Manager/Admin Card 2: Reviewed / Approved */}
+            <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-emerald-100/80 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
+              <div className="flex items-center gap-5 z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/25 ring-4 ring-emerald-50 dark:ring-emerald-950/40 group-hover:rotate-3 transition-transform duration-300">
+                  <UserCheck className="w-7 h-7 stroke-[2]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    REVIEWED / APPROVED
+                  </span>
+                  <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {reviewedCount}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Reports Approved
+                  </span>
+                </div>
+              </div>
+
+              <div className="self-start z-10 hidden sm:block">
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+                  {totalTrackedCount > 0 ? Math.round((reviewedCount / totalTrackedCount) * 100) : 0}% Done
+                </span>
+              </div>
+            </div>
+
+            {/* Manager/Admin Card 3: Pending Submission */}
+            <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-amber-100/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
+              <div className="flex items-center gap-5 z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25 ring-4 ring-amber-50 dark:ring-amber-950/40 group-hover:rotate-3 transition-transform duration-300">
+                  <AlertTriangle className="w-7 h-7 stroke-[2]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                    PENDING SUBMISSION
+                  </span>
+                  <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                    {pendingSubmissionCount}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Awaiting Submission
+                  </span>
+                </div>
+              </div>
+
+              <div className="self-start z-10 hidden sm:block">
+                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100/80 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 shadow-2xs flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
+                  {totalTrackedCount > 0 ? Math.round((pendingSubmissionCount / totalTrackedCount) * 100) : 0}% Pending
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Filter & Search Bar */}
