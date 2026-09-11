@@ -50,21 +50,21 @@ const getReportDateStr = (dateVal) => {
   }
 };
 
-// Robust multi-timezone matching so reports on the same day are never missed
+// Robust multi-timezone matching so reports strictly belonging to target date are matched
 const isSameDayReport = (rep, targetDateStr) => {
   if (!rep || !targetDateStr) return false;
-  const dates = [rep.date, rep.createdAt, rep.updatedAt].filter(Boolean);
-  return dates.some((dt) => {
-    const d = new Date(dt);
-    if (isNaN(d.getTime())) return false;
-    try {
-      if (new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d) === targetDateStr) return true;
-    } catch (e) {}
-    if (d.toISOString().split('T')[0] === targetDateStr) return true;
-    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    if (local === targetDateStr) return true;
-    return false;
-  });
+  // Strictly match work date (or fallback to createdAt if date is missing). Never match updatedAt!
+  const dt = rep.date || rep.createdAt;
+  if (!dt) return false;
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return false;
+  try {
+    if (new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d) === targetDateStr) return true;
+  } catch (e) {}
+  if (d.toISOString().split('T')[0] === targetDateStr) return true;
+  const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (local === targetDateStr) return true;
+  return false;
 };
 
 export const DailyReportDetailsModal = ({
