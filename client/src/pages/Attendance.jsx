@@ -412,6 +412,23 @@ export const Attendance = () => {
     return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
+  const getLocalDateString = (dateVal) => {
+    if (!dateVal) return '';
+    const dateStr = typeof dateVal === 'string' ? dateVal : (dateVal instanceof Date ? dateVal.toISOString() : String(dateVal));
+    if (dateStr.endsWith('T00:00:00.000Z')) {
+      const d = new Date(dateVal);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    const d = new Date(dateVal);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   // Group attendance logs by Employee & include directory employees according to role permissions
   const groupedEmployeeMap = {};
 
@@ -516,6 +533,51 @@ export const Attendance = () => {
     }
   });
 
+  // 3. Compute accurate "This Month" metrics (Present, Late, Absent) for each employee card
+  const todayDateObj = new Date();
+  const currentMonthIdx = todayDateObj.getMonth();
+  const currentYearVal = todayDateObj.getFullYear();
+  const todayDayNumber = todayDateObj.getDate();
+
+  // Working days in the current month up to today (excluding Sundays)
+  let currentMonthWorkingDays = 0;
+  for (let day = 1; day <= todayDayNumber; day++) {
+    const d = new Date(currentYearVal, currentMonthIdx, day);
+    if (d.getDay() !== 0) currentMonthWorkingDays++; // Sunday is week off
+  }
+
+  Object.values(groupedEmployeeMap).forEach((empGroup) => {
+    const presentDates = new Set();
+    let thisMonthLate = 0;
+    let explicitAbsentCount = 0;
+
+    (empGroup.logs || []).forEach((log) => {
+      const logDateVal = log.clockIn || log.date;
+      if (logDateVal) {
+        const d = new Date(logDateVal);
+        if (d.getMonth() === currentMonthIdx && d.getFullYear() === currentYearVal) {
+          const dStr = getLocalDateString(logDateVal);
+          if (log.status === 'ABSENT') {
+            explicitAbsentCount++;
+          } else if (log.status !== 'WEEK_OFF') {
+            presentDates.add(dStr);
+            if (log.status === 'LATE') {
+              thisMonthLate++;
+            }
+          }
+        }
+      }
+    });
+
+    const presentDays = presentDates.size;
+    empGroup.presentCount = presentDays;
+    empGroup.lateCount = thisMonthLate;
+
+    // Absent = total working days in this month up to today minus days present
+    const calculatedAbsent = Math.max(0, currentMonthWorkingDays - presentDays);
+    empGroup.absentCount = Math.max(explicitAbsentCount, calculatedAbsent);
+  });
+
   const employeeGroupList = Object.values(groupedEmployeeMap);
 
   const filteredEmployeeGroupList = employeeGroupList.filter((empGroup) => {
@@ -541,23 +603,6 @@ export const Attendance = () => {
 
     return true;
   });
-
-  const getLocalDateString = (dateVal) => {
-    if (!dateVal) return '';
-    const dateStr = typeof dateVal === 'string' ? dateVal : (dateVal instanceof Date ? dateVal.toISOString() : String(dateVal));
-    if (dateStr.endsWith('T00:00:00.000Z')) {
-      const d = new Date(dateVal);
-      const y = d.getUTCFullYear();
-      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    }
-    const d = new Date(dateVal);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
 
   // Helper to generate history records (all days of current month + past 90 days)
   const getEmployeeFullHistory = (empGroup) => {
