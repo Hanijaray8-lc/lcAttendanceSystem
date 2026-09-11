@@ -237,11 +237,13 @@ export const DailyReports = () => {
   };
 
   // Metrics Calculations (Counting unique employees, not report documents)
+  const userRole = (user?.role || '').toUpperCase();
+  const isEmployee = userRole === 'EMPLOYEE' || (!['ADMIN', 'HR', 'TEAM_LEAD', 'CEO'].includes(userRole));
   const totalTrackedCount = employeeStatuses.length > 0 ? employeeStatuses.length : (metrics.totalTracked || 0);
   const reviewedCount = reports.filter((r) => r.status === 'REVIEWED' || r.status === 'APPROVED').length;
-  const pendingSubmissionCount = employeeStatuses.length > 0
+  const pendingSubmissionCount = Math.max(0, employeeStatuses.length > 0
     ? employeeStatuses.filter((e) => !e.hasSubmitted).length
-    : (metrics.pendingCount ?? 0);
+    : (metrics.pendingCount ?? 0));
 
   return (
     <div className="space-y-6 pb-28 sm:pb-8 relative">
@@ -325,7 +327,7 @@ export const DailyReports = () => {
 
       {/* 3 Metric Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {user?.role === 'EMPLOYEE' ? (
+        {isEmployee ? (
           <>
             {/* Employee Card 1: My Submissions */}
             <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-blue-100/80 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
