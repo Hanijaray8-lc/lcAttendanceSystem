@@ -70,23 +70,25 @@ export const DailyReportDetailsModal = ({
   const isOwner = reportUserId && currentUserId && reportUserId === currentUserId;
   const canModify = isOwner;
 
-  // Build comments list: prefer comments array, fallback to legacy feedback
+  // Build comments list: combine comments array with legacy feedback so no review comments are ever omitted
   const commentsList = (() => {
-    if (currentReport?.comments && currentReport.comments.length > 0) {
-      return currentReport.comments;
+    const list = [];
+    if (Array.isArray(currentReport?.comments) && currentReport.comments.length > 0) {
+      list.push(...currentReport.comments);
     }
     if (currentReport?.feedback && currentReport.feedback.trim()) {
-      return [
-        {
+      const alreadyInComments = list.some(c => (c.comment || c.feedback || '').trim() === currentReport.feedback.trim());
+      if (!alreadyInComments) {
+        list.unshift({
           _id: 'legacy_review',
           user: currentReport.reviewedBy,
           comment: currentReport.feedback,
           status: currentReport.status || 'REVIEWED',
           createdAt: currentReport.reviewedAt || currentReport.updatedAt || currentReport.date
-        }
-      ];
+        });
+      }
     }
-    return [];
+    return list;
   })();
 
   const handleSelectReportFromGroup = (rep) => {
@@ -521,7 +523,9 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
             ) : (
               <div className="space-y-2.5">
                 {commentsList.map((c, index) => {
-                  const commenter = c.user;
+                  const commenter = (c.user && typeof c.user === 'object')
+                    ? c.user
+                    : (currentReport?.reviewedBy && typeof currentReport.reviewedBy === 'object' ? currentReport.reviewedBy : null);
                   const commenterName = commenter
                     ? `${commenter.firstName || ''} ${commenter.lastName || ''}`.trim() || 'Reviewer'
                     : 'Reviewer';

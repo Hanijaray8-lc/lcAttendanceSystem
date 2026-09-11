@@ -279,9 +279,11 @@ export const EmployeeReportHistoryModal = ({ isOpen, onClose, userId, onSelectRe
                                     </p>
                                     <div className="space-y-1.5">
                                       {list.map((c, cIdx) => {
-                                        const cUser = c.user;
-                                        const cName = cUser ? `${cUser.firstName || ''} ${cUser.lastName || ''}`.trim() : 'Alban Santhosh A (CEO)';
-                                        const roleKey = cUser?.role || 'CEO';
+                                        const cUser = (c.user && typeof c.user === 'object')
+                                          ? c.user
+                                          : (r.reviewedBy && typeof r.reviewedBy === 'object' ? r.reviewedBy : null);
+                                        const cName = cUser ? `${cUser.firstName || ''} ${cUser.lastName || ''}`.trim() : 'Reviewer';
+                                        const roleKey = cUser?.role || 'REVIEWER';
                                         const roleLabel = roleKey === 'CEO' ? 'CEO' : roleKey === 'TEAM_LEAD' ? 'Team Lead' : roleKey === 'HR' ? 'HR' : roleKey === 'ADMIN' ? 'Admin' : roleKey;
                                         const badgeCls = roleBadgeConfig[roleKey] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
 
