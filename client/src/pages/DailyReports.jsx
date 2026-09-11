@@ -140,6 +140,13 @@ export const DailyReports = () => {
   // History Modal
   const [historyModalUserId, setHistoryModalUserId] = useState(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  // Called after any review/comment is saved — refreshes both main list and history modal
+  const handleUpdateSuccess = () => {
+    fetchReportsData();
+    setHistoryRefreshKey((k) => k + 1);
+  };
 
   const handleOpenHistory = (targetUserId) => {
     if (targetUserId) {
@@ -739,7 +746,7 @@ export const DailyReports = () => {
         report={selectedReport}
         reportsList={selectedReportsGroup}
         currentUser={user}
-        onUpdateSuccess={fetchReportsData}
+        onUpdateSuccess={handleUpdateSuccess}
         onEditReport={handleEditReport}
       />
 
@@ -748,6 +755,7 @@ export const DailyReports = () => {
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         userId={historyModalUserId}
+        refreshKey={historyRefreshKey}
         onSelectReport={(report) => {
           setIsHistoryModalOpen(false);
           handleOpenDetails(report);

@@ -69,14 +69,14 @@ const groupByMonth = (reports) => {
   return groups;
 };
 
-export const EmployeeReportHistoryModal = ({ isOpen, onClose, userId, onSelectReport }) => {
+export const EmployeeReportHistoryModal = ({ isOpen, onClose, userId, onSelectReport, refreshKey }) => {
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
 
   useEffect(() => {
     if (isOpen && userId) fetchEmployeeHistory();
-  }, [isOpen, userId]);
+  }, [isOpen, userId, refreshKey]);
 
   const fetchEmployeeHistory = async () => {
     try {
