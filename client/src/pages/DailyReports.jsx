@@ -9,9 +9,6 @@ import noteImg from '../assets/note.webp';
 import notesImg from '../assets/notes.webp';
 import winImg from '../assets/win.webp';
 import growthImg from '../assets/growth.webp';
-import bg1Img from '../assets/bg1.webp';
-import bg2Img from '../assets/bg2.webp';
-import bg3Img from '../assets/bg3.webp';
 import {
   FileText,
   Plus,
@@ -327,16 +324,7 @@ export const DailyReports = () => {
       {/* 3 Metric Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Total Tracked Employees Card */}
-        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-            <img
-              src={bg3Img}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-95 dark:opacity-40 group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-slate-900 dark:via-slate-900/80" />
-          </div>
-
+        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-blue-100/80 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300 dark:hover:border-blue-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
           <div className="flex items-center gap-5 z-10">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/25 ring-4 ring-blue-50 dark:ring-blue-950/40 group-hover:rotate-3 transition-transform duration-300">
               <Users className="w-7 h-7 stroke-[2]" />
@@ -355,24 +343,15 @@ export const DailyReports = () => {
           </div>
 
           <div className="self-start z-10 hidden sm:block">
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50/90 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100/80 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
               Live
             </span>
           </div>
         </div>
 
         {/* Reviewed / Approved Card */}
-        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-            <img
-              src={bg1Img}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-95 dark:opacity-40 group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-slate-900 dark:via-slate-900/80" />
-          </div>
-
+        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-emerald-100/80 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
           <div className="flex items-center gap-5 z-10">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/25 ring-4 ring-emerald-50 dark:ring-emerald-950/40 group-hover:rotate-3 transition-transform duration-300">
               <UserCheck className="w-7 h-7 stroke-[2]" />
@@ -391,24 +370,15 @@ export const DailyReports = () => {
           </div>
 
           <div className="self-start z-10 hidden sm:block">
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50/90 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Verified
+            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+              {totalTrackedCount > 0 ? Math.round((reviewedCount / totalTrackedCount) * 100) : 0}% Done
             </span>
           </div>
         </div>
 
         {/* Pending / Not Submitted Card */}
-        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-            <img
-              src={bg2Img}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-95 dark:opacity-40 group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-slate-900 dark:via-slate-900/80" />
-          </div>
-
+        <div className="relative overflow-hidden glass-card p-6 sm:p-7 rounded-3xl border border-amber-100/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/30 flex items-center justify-between shadow-sm hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-300 dark:hover:border-amber-800 hover:-translate-y-1 transition-all duration-300 group min-h-[148px]">
           <div className="flex items-center gap-5 z-10">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25 ring-4 ring-amber-50 dark:ring-amber-950/40 group-hover:rotate-3 transition-transform duration-300">
               <AlertTriangle className="w-7 h-7 stroke-[2]" />
@@ -427,9 +397,9 @@ export const DailyReports = () => {
           </div>
 
           <div className="self-start z-10 hidden sm:block">
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50/90 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/80 shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Pending
+            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100/80 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 shadow-2xs flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
+              {totalTrackedCount > 0 ? Math.round((pendingSubmissionCount / totalTrackedCount) * 100) : 0}% Pending
             </span>
           </div>
         </div>
