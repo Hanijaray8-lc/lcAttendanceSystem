@@ -61,6 +61,9 @@ if (process.env.VERCEL !== '1') {
 app.use(async (req, res, next) => {
   try {
     await connectDB();
+    if (process.env.VERCEL === '1') {
+      restoreAttendanceData().catch(e => console.error(e));
+    }
     next();
   } catch (err) {
     console.error('[DB Middleware Error]', err.message);

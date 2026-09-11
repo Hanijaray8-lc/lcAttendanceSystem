@@ -483,6 +483,13 @@ export const getTodayAttendance = asyncHandler(async (req, res, next) => {
 
 // Get Attendance Logs (Monthly / Team / All)
 export const getAttendanceLogs = asyncHandler(async (req, res, next) => {
+  // Ensure data is restored if currently empty
+  const totalCount = await Attendance.countDocuments();
+  if (totalCount === 0) {
+    const { restoreAttendanceData } = await import('../utils/restoreAttendance.js');
+    await restoreAttendanceData();
+  }
+
   const role = req.user.role;
   const userId = req.user._id;
   const { month, year, status } = req.query;
