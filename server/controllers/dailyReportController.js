@@ -264,15 +264,16 @@ export const reviewDailyReport = asyncHandler(async (req, res, next) => {
     return next(new AppError('Daily report not found.', 404));
   }
 
-  // Preserve all comments in sequence without overwriting
+  // Append each reviewer's comment to the comments array (never overwrite old feedback)
   if (feedback && feedback.trim()) {
+    if (!Array.isArray(report.comments)) report.comments = [];
     report.comments.push({
       user: req.user._id,
       comment: feedback.trim(),
       status: status || report.status || 'REVIEWED',
       createdAt: new Date()
     });
-    report.feedback = feedback.trim();
+    // Do NOT overwrite report.feedback — keep comments[] as the source of truth
   }
 
   if (status) report.status = status;
