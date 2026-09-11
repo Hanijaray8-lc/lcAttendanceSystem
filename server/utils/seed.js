@@ -15,29 +15,7 @@ import { DailyReport } from '../models/DailyReport.js';
 dotenv.config();
 
 export const clearAllLeaveRequests = async () => {
-  try {
-    const delRes = await LeaveRequest.deleteMany({});
-    console.log(`[Seed Engine] Cleared ${delRes.deletedCount || 0} leave requests.`);
-    
-    // Clear leave notifications
-    await Notification.deleteMany({ type: { $regex: /^LEAVE_/i } });
-
-    // Reset Leave Balances
-    const balances = await LeaveBalance.find();
-    for (const bal of balances) {
-      if (bal.allocations && bal.allocations.length > 0) {
-        for (const alloc of bal.allocations) {
-          alloc.used = 0;
-          alloc.pending = 0;
-          alloc.remaining = alloc.total || 12;
-        }
-        await bal.save();
-      }
-    }
-    console.log('[Seed Engine] Reset leave balances to 0 used / 0 pending.');
-  } catch (err) {
-    console.error('[Clean Leave Engine Error]', err);
-  }
+  // Safe no-op: never delete anything
 };
 
 export const updateEarnedLeaveToPaidLeave = async () => {
@@ -327,16 +305,3 @@ export const runAutoSeed = async () => {
     console.error('[Seed Engine Error]', error);
   }
 };
-
-// Add this at the very bottom of server/utils/seed.js
-if (process.argv[1] && process.argv[1].endsWith('seed.js')) {
-  mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/elms_enterprise')
-    .then(async () => {
-      console.log('Force Seeding...');
-      // Temporarily bypass userCount check to force create accounts
-      await runAutoSeed();
-      console.log('Seed Complete!');
-      process.exit(0);
-    })
-    .catch(err => console.error(err));
-}
