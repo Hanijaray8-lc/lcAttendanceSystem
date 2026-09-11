@@ -43,6 +43,17 @@ export const submitDailyReport = asyncHandler(async (req, res, next) => {
     status: 'SUBMITTED'
   });
 
+  await report.populate([
+    {
+      path: 'user',
+      select: 'firstName lastName employeeId department role email profileImage designation',
+      populate: [
+        { path: 'department', select: 'name code' },
+        { path: 'designation', select: 'title name' }
+      ]
+    }
+  ]);
+
   res.status(200).json({
     status: 'success',
     data: { report }
@@ -58,6 +69,14 @@ export const getTodayReportStatus = asyncHandler(async (req, res, next) => {
     user: userId,
     date: { $gte: start, $lte: end }
   })
+    .populate({
+      path: 'user',
+      select: 'firstName lastName employeeId department role email profileImage designation',
+      populate: [
+        { path: 'department', select: 'name code' },
+        { path: 'designation', select: 'title name' }
+      ]
+    })
     .populate('reviewedBy', 'firstName lastName role')
     .populate({
       path: 'comments.user',
@@ -229,6 +248,14 @@ export const getEmployeeReportHistory = asyncHandler(async (req, res, next) => {
   }
 
   const reports = await DailyReport.find({ user: userId })
+    .populate({
+      path: 'user',
+      select: 'firstName lastName employeeId department role email profileImage designation',
+      populate: [
+        { path: 'department', select: 'name code' },
+        { path: 'designation', select: 'title name' }
+      ]
+    })
     .populate('reviewedBy', 'firstName lastName role')
     .populate({
       path: 'comments.user',
@@ -395,6 +422,18 @@ export const updateDailyReport = asyncHandler(async (req, res, next) => {
   if (workStatus) report.workStatus = workStatus;
 
   await report.save();
+  await report.populate([
+    {
+      path: 'user',
+      select: 'firstName lastName employeeId department role email profileImage designation',
+      populate: [
+        { path: 'department', select: 'name code' },
+        { path: 'designation', select: 'title name' }
+      ]
+    },
+    { path: 'reviewedBy', select: 'firstName lastName role' },
+    { path: 'comments.user', select: 'firstName lastName role profileImage' }
+  ]);
 
   res.status(200).json({
     status: 'success',

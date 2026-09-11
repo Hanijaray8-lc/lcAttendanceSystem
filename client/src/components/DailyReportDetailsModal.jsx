@@ -28,9 +28,9 @@ const formatEmpId = (empId, fallback = 'EMP001') => {
   return empId;
 };
 
-const formatDepartmentName = (dept, fallback = 'Engineering') => {
+const formatDepartmentName = (dept, fallback = 'Devloper') => {
   if (!dept) return fallback;
-  if (typeof dept === 'object' && dept.name) return dept.name;
+  if (typeof dept === 'object') return dept.name || dept.title || fallback;
   if (typeof dept === 'string' && !dept.match(/^[0-9a-fA-F]{24}$/)) return dept;
   return fallback;
 };
@@ -81,6 +81,7 @@ export const DailyReportDetailsModal = ({
   const [reportsGroup, setReportsGroup] = React.useState(
     initialReportsList && initialReportsList.length ? initialReportsList : (initialReport ? [initialReport] : [])
   );
+  const [targetUserDetails, setTargetUserDetails] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [reviewStatus, setReviewStatus] = useState(initialReport?.status || 'REVIEWED');
   const [submitting, setSubmitting] = useState(false);
@@ -97,13 +98,21 @@ export const DailyReportDetailsModal = ({
 
     // Automatically check for all reports on the same day if only 1 report is present in group
     if (initialReport) {
-      const targetUserId = initialReport.user?._id || initialReport.user;
+      const targetUserId = initialReport.user?._id || (typeof initialReport.user === 'string' ? initialReport.user : null);
       const targetDateStr = getReportDateStr(initialReport.date);
       if (targetUserId && targetDateStr) {
         api.get(`/daily-reports/history/${targetUserId}`)
           .then((res) => {
+            const u = res.data?.data?.user;
+            if (u) setTargetUserDetails(u);
             const allReports = res.data?.data?.reports || [];
-            const sameDay = allReports.filter((r) => isSameDayReport(r, targetDateStr));
+            const userObj = u || (initialReport.user && typeof initialReport.user === 'object' ? initialReport.user : null);
+            const sameDay = allReports
+              .filter((r) => isSameDayReport(r, targetDateStr))
+              .map((r) => ({
+                ...r,
+                user: (r.user && typeof r.user === 'object' && r.user.firstName) ? r.user : userObj
+              }));
             if (sameDay.length > 1) {
               setReportsGroup(sameDay);
             }
@@ -113,13 +122,46 @@ export const DailyReportDetailsModal = ({
     }
   }, [initialReport, initialReportsList]);
 
-  if (!currentReport) return null;
-
-  const isReviewer = ['ADMIN', 'CEO', 'HR', 'TEAM_LEAD'].includes(currentUser?.role);
-  const reportUserId = currentReport.user?._id ? currentReport.user._id.toString() : currentReport.user ? currentReport.user.toString() : '';
+  const reportUserId = currentReport?.user?._id
+    ? currentReport.user._id.toString()
+    : (typeof currentReport?.user === 'string' ? currentReport.user : (initialReport?.user?._id?.toString() || (typeof initialReport?.user === 'string' ? initialReport.user : '')));
   const currentUserId = currentUser?._id ? currentUser._id.toString() : '';
-  const isOwner = reportUserId && currentUserId && reportUserId === currentUserId;
+  const isOwner = Boolean(reportUserId && currentUserId && reportUserId === currentUserId);
   const canModify = isOwner;
+  const isReviewer = ['ADMIN', 'CEO', 'HR', 'TEAM_LEAD'].includes(currentUser?.role);
+
+  // Robust report user resolution so correct name and details are always displayed
+  const reportUser = React.useMemo(() => {
+    // 1. If targetUserDetails was loaded from API
+    if (targetUserDetails && targetUserDetails.firstName) {
+      return targetUserDetails;
+    }
+    // 2. If currentReport.user is an object with firstName
+    if (currentReport?.user && typeof currentReport.user === 'object' && currentReport.user.firstName) {
+      return currentReport.user;
+    }
+    // 3. If initialReport.user is an object with firstName
+    if (initialReport?.user && typeof initialReport.user === 'object' && initialReport.user.firstName) {
+      return initialReport.user;
+    }
+    // 4. If any report in reportsGroup has an object user with firstName
+    const groupUser = reportsGroup?.find(r => r?.user && typeof r.user === 'object' && r.user.firstName)?.user;
+    if (groupUser) {
+      return groupUser;
+    }
+    // 5. If currentUser matches the report owner
+    if (currentUserId && reportUserId && currentUserId === reportUserId) {
+      return currentUser;
+    }
+    // 6. If viewing own report (isOwner), fallback to currentUser
+    if (isOwner && currentUser) {
+      return currentUser;
+    }
+    // 7. Fallback to whatever currentReport.user is, or currentUser
+    return (currentReport?.user && typeof currentReport.user === 'object') ? currentReport.user : (currentUser || null);
+  }, [currentReport, initialReport, reportsGroup, targetUserDetails, currentUser, isOwner, currentUserId, reportUserId]);
+
+  if (!currentReport) return null;
 
   // Build comments list: combine comments array with legacy feedback so no review comments are ever omitted
   const commentsList = (() => {
@@ -143,7 +185,10 @@ export const DailyReportDetailsModal = ({
   })();
 
   const handleSelectReportFromGroup = (rep) => {
-    setCurrentReport(rep);
+    const enriched = (rep && (!rep.user || typeof rep.user !== 'object' || !rep.user.firstName) && reportUser)
+      ? { ...rep, user: reportUser }
+      : rep;
+    setCurrentReport(enriched);
     setNewComment('');
     setReviewStatus(rep?.status || 'REVIEWED');
   };
@@ -207,10 +252,16 @@ export const DailyReportDetailsModal = ({
     
     try {
       setIsLoadingDate(true);
-      const targetUserId = currentReport.user?._id || currentReport.user;
+      const targetUserId = currentReport.user?._id || (typeof currentReport.user === 'string' ? currentReport.user : currentUser?._id);
       // Fetch user's report history
       const res = await api.get(`/daily-reports/history/${targetUserId}`);
-      const historyReports = res.data?.data?.reports || [];
+      const u = res.data?.data?.user;
+      if (u) setTargetUserDetails(u);
+      const userObj = u || reportUser;
+      const historyReports = (res.data?.data?.reports || []).map(r => ({
+        ...r,
+        user: (r.user && typeof r.user === 'object' && r.user.firstName) ? r.user : userObj
+      }));
       
       // Find all reports for the selected date using robust timezone comparison
       const matchingReports = historyReports.filter(r => isSameDayReport(r, selectedDate));
@@ -231,7 +282,7 @@ export const DailyReportDetailsModal = ({
   };
 
   const handleDownloadReport = () => {
-    const empName = `${currentReport.user?.firstName || 'Employee'} ${currentReport.user?.lastName || ''}`.trim();
+    const empName = reportUser?.firstName ? `${reportUser.firstName} ${reportUser.lastName || ''}`.trim() : 'Employee';
     const dateStr = new Date(currentReport.date).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -264,8 +315,8 @@ export const DailyReportDetailsModal = ({
 EMPLOYEE INFORMATION:
 ------------------------------------------------------------------------
 Name:        ${empName}
-Employee ID: ${currentReport.user?.employeeId || 'N/A'}
-Department:  ${currentReport.user?.department?.name || 'N/A'}
+Employee ID: ${formatEmpId(reportUser?.employeeId, 'N/A')}
+Department:  ${formatDepartmentName(reportUser?.department || reportUser?.designation, 'N/A')}
 Report Date: ${dateStr}
 Status:      ${currentReport.status || 'SUBMITTED'}
 
@@ -332,13 +383,13 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
           {/* User Profile Card Matching Image 1 */}
           <div className={`p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-sky-50/50 to-indigo-50/60 dark:from-slate-800/90 dark:to-slate-800/40 border border-blue-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs ${isLoadingDate ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex items-center gap-3.5">
-              <UserAvatar user={currentReport.user} size="w-12 h-12 text-sm shrink-0" />
+              <UserAvatar user={reportUser} size="w-12 h-12 text-sm shrink-0" />
               <div>
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  {currentReport.user?.firstName || 'Employee'} {currentReport.user?.lastName || ''}
+                  {reportUser?.firstName ? `${reportUser.firstName} ${reportUser.lastName || ''}`.trim() : 'Employee'}
                 </h3>
                 <p className="text-xs text-blue-600/90 dark:text-blue-400 font-extrabold mt-0.5">
-                  {formatEmpId(currentReport.user?.employeeId)} • {formatDepartmentName(currentReport.user?.department)}
+                  {formatEmpId(reportUser?.employeeId)} • {formatDepartmentName(reportUser?.department || reportUser?.designation)}
                 </p>
               </div>
             </div>

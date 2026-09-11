@@ -314,7 +314,7 @@ export const EmployeeReportHistoryModal = ({ isOpen, onClose, userId, onSelectRe
                               })()}
                               {onSelectReport && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); onSelectReport(r); }}
+                                  onClick={(e) => { e.stopPropagation(); onSelectReport({ ...r, user: (r.user && typeof r.user === 'object' && r.user.firstName) ? r.user : targetUser }); }}
                                   className="text-[10px] font-black text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 mt-1"
                                 >
                                   <ExternalLink className="w-3 h-3" /> View Full Details

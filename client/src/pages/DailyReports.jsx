@@ -221,9 +221,21 @@ export const DailyReports = () => {
     fetchReportsData();
   };
 
-  const handleOpenDetails = (r, reportsGroup = []) => {
-    setSelectedReport(r);
-    setSelectedReportsGroup(reportsGroup && reportsGroup.length > 0 ? reportsGroup : (r ? [r] : []));
+  const handleOpenDetails = (r, reportsGroup = [], itemUser = null) => {
+    const enrichedReport = (r && (!r.user || typeof r.user !== 'object' || !r.user.firstName) && itemUser)
+      ? { ...r, user: itemUser }
+      : r;
+    const enrichedGroup = (reportsGroup && reportsGroup.length > 0)
+      ? reportsGroup.map(grpRep => {
+          if (grpRep && (!grpRep.user || typeof grpRep.user !== 'object' || !grpRep.user.firstName) && itemUser) {
+            return { ...grpRep, user: itemUser };
+          }
+          return grpRep;
+        })
+      : (enrichedReport ? [enrichedReport] : []);
+
+    setSelectedReport(enrichedReport);
+    setSelectedReportsGroup(enrichedGroup);
     setIsDetailsModalOpen(true);
   };
 
@@ -504,7 +516,7 @@ export const DailyReports = () => {
                 key={item._id}
                 onClick={() => {
                   if (item.hasSubmitted && item.report) {
-                    handleOpenDetails(item.report, item.reports);
+                    handleOpenDetails(item.report, item.reports, item.user);
                   } else {
                     handleOpenHistory(item.user?._id);
                   }
@@ -652,7 +664,7 @@ export const DailyReports = () => {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (item.report) handleOpenDetails(item.report, item.reports);
+                          if (item.report) handleOpenDetails(item.report, item.reports, item.user);
                         }}
                         className={`flex-1 py-3 px-4 rounded-full ${palette.btnBg} text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02]`}
                       >
