@@ -15,7 +15,8 @@ import {
   Download,
   Edit3,
   Trash2,
-  MessageSquare
+  MessageSquare,
+  History
 } from 'lucide-react';
 import api from '../services/api';
 
