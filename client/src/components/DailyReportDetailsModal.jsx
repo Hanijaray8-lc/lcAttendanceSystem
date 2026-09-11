@@ -440,7 +440,7 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
                 <span>Multiple Reports Submitted ({reportsGroup.length} Reports on {new Date(currentReport.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}):</span>
                 <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold">Select report to view</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                 {reportsGroup.map((rep, index) => {
                   const isSelected = rep._id === currentReport._id;
                   return (
@@ -448,16 +448,22 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
                       key={rep._id || index}
                       type="button"
                       onClick={() => handleSelectReportFromGroup(rep)}
-                      className={`px-3 sm:px-4 py-2 sm:py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
+                      className={`w-full px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-between gap-2 transition-all cursor-pointer min-w-0 ${
                         isSelected
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-400 scale-[1.01]'
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-400 sm:scale-[1.01]'
                           : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-100 dark:hover:bg-slate-700 border border-indigo-200 dark:border-indigo-800'
                       }`}
                     >
-                      <span className="shrink-0 font-black">Report #{index + 1}:</span>
-                      <span className="truncate max-w-[150px] sm:max-w-[160px] text-left">{rep.title || rep.projectTitle || 'Work Report'}</span>
+                      <div className="flex items-center gap-1.5 min-w-0 truncate">
+                        <span className="shrink-0 font-black">Report #{index + 1}:</span>
+                        <span className="truncate text-left font-bold">{rep.title || rep.projectTitle || 'Work Report'}</span>
+                      </div>
                       {rep.reportSlot && rep.reportSlot !== 'GENERAL' && (
-                        <span className="text-[10px] opacity-90 uppercase font-black shrink-0">({rep.reportSlot})</span>
+                        <span className={`text-[10px] uppercase font-black shrink-0 px-1.5 py-0.5 rounded-md ${
+                          isSelected ? 'bg-indigo-700/80 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                        }`}>
+                          {rep.reportSlot}
+                        </span>
                       )}
                     </button>
                   );
