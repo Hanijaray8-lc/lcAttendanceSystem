@@ -861,3 +861,13 @@ export const forceCheckOut = asyncHandler(async (req, res, next) => {
     data: { attendance }
   });
 });
+
+export const restoreAllAttendanceLogs = asyncHandler(async (req, res, next) => {
+  const { restoreAttendanceData } = await import('../utils/restoreAttendance.js');
+  await restoreAttendanceData();
+  res.status(200).json({
+    status: 'success',
+    message: 'Attendance records restored successfully!'
+  });
+});
+
