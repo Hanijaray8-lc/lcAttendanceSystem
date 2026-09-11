@@ -38,7 +38,6 @@ import dailyReportRoutes from './routes/dailyReportRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import { checkEmergencyEscalations } from './services/escalationService.js';
 import { updateEarnedLeaveToPaidLeave, updateCeoName } from './utils/seed.js';
-import { restoreAttendanceData } from './utils/restoreAttendance.js';
 
 const app = express();
 
@@ -51,7 +50,6 @@ if (process.env.VERCEL !== '1') {
   connectDB().then(() => {
     updateEarnedLeaveToPaidLeave();
     updateCeoName();
-    restoreAttendanceData();
   }).catch((err) => {
     console.error('[DB Init Error]', err.message);
   });
@@ -61,9 +59,6 @@ if (process.env.VERCEL !== '1') {
 app.use(async (req, res, next) => {
   try {
     await connectDB();
-    if (process.env.VERCEL === '1') {
-      restoreAttendanceData().catch(e => console.error(e));
-    }
     next();
   } catch (err) {
     console.error('[DB Middleware Error]', err.message);

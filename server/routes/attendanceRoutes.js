@@ -8,8 +8,7 @@ import {
   getAttendanceLogs,
   updateAttendance,
   getLiveStatus,
-  forceCheckOut,
-  restoreAllAttendanceLogs
+  forceCheckOut
 } from '../controllers/attendanceController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 
@@ -25,7 +24,6 @@ router.get('/today', getTodayAttendance);
 router.get('/logs', getAttendanceLogs);
 router.get('/live-status', restrictTo('CEO', 'ADMIN', 'HR', 'TEAM_LEAD'), getLiveStatus);
 router.post('/force-checkout/:userId', restrictTo('CEO', 'ADMIN', 'HR', 'TEAM_LEAD'), forceCheckOut);
-router.post('/restore-all', restrictTo('CEO', 'ADMIN'), restoreAllAttendanceLogs);
 router.patch('/:id', updateAttendance);
 router.put('/:id', updateAttendance);
 

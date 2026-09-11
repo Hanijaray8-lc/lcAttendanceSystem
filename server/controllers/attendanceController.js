@@ -483,13 +483,6 @@ export const getTodayAttendance = asyncHandler(async (req, res, next) => {
 
 // Get Attendance Logs (Monthly / Team / All)
 export const getAttendanceLogs = asyncHandler(async (req, res, next) => {
-  // Ensure data is restored if currently empty
-  const totalCount = await Attendance.countDocuments();
-  if (totalCount === 0) {
-    const { restoreAttendanceData } = await import('../utils/restoreAttendance.js');
-    await restoreAttendanceData();
-  }
-
   const role = req.user.role;
   const userId = req.user._id;
   const { month, year, status } = req.query;
@@ -866,15 +859,6 @@ export const forceCheckOut = asyncHandler(async (req, res, next) => {
     status: 'success',
     message: `${targetEmployee.firstName} ${targetEmployee.lastName} has been checked out successfully.`,
     data: { attendance }
-  });
-});
-
-export const restoreAllAttendanceLogs = asyncHandler(async (req, res, next) => {
-  const { restoreAttendanceData } = await import('../utils/restoreAttendance.js');
-  await restoreAttendanceData();
-  res.status(200).json({
-    status: 'success',
-    message: 'Attendance records restored successfully!'
   });
 });
 
