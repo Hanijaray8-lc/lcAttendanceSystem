@@ -853,14 +853,24 @@ export const Attendance = () => {
       const params = {};
       if (statusFilter) params.status = statusFilter;
 
-      const [logsRes, empRes] = await Promise.all([
+      const [logsResult, empResult] = await Promise.allSettled([
         api.get('/attendance/logs', { params }),
-        api.get('/employees')
+        api.get('/employees', { params: { limit: 100 } })
       ]);
 
-      setLogs(logsRes.data.data.logs || []);
-      setSummary(logsRes.data.data.summary);
-      setAllEmployees(empRes.data.data.employees || []);
+      if (logsResult.status === 'fulfilled') {
+        setLogs(logsResult.value.data.data.logs || []);
+        setSummary(logsResult.value.data.data.summary);
+      } else {
+        setLogs([]);
+        console.error('Attendance logs fetch failed:', logsResult.reason);
+      }
+
+      if (empResult.status === 'fulfilled') {
+        setAllEmployees(empResult.value.data.data.employees || []);
+      } else {
+        console.error('Employees fetch failed:', empResult.reason);
+      }
     } catch (err) {
       console.error(err);
     } finally {
