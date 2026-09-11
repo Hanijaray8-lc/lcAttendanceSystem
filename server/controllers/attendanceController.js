@@ -861,12 +861,3 @@ export const forceCheckOut = asyncHandler(async (req, res, next) => {
     data: { attendance }
   });
 });
-
-// Clear all test attendance logs (restricted to CEO & ADMIN)
-export const clearAllAttendanceLogs = asyncHandler(async (req, res, next) => {
-  const delRes = await Attendance.deleteMany({});
-  res.status(200).json({
-    status: 'success',
-    message: `Successfully cleared ${delRes.deletedCount || 0} test attendance records. System is now ready for live real-time employee punches.`
-  });
-});

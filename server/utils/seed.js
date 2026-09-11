@@ -60,24 +60,6 @@ export const updateCeoName = async () => {
   }
 };
 
-export const cleanTestAttendanceRecords = async () => {
-  try {
-    let settings = await Settings.findOne();
-    if (!settings || !settings.testAttendanceCleaned) {
-      const delRes = await Attendance.deleteMany({});
-      console.log(`[Seed Engine] Production Reset: Successfully wiped ${delRes.deletedCount || 0} test attendance records.`);
-      if (settings) {
-        settings.testAttendanceCleaned = true;
-        await settings.save();
-      } else {
-        await Settings.create({ testAttendanceCleaned: true });
-      }
-    }
-  } catch (err) {
-    console.error('[Clean Test Attendance Error]', err);
-  }
-};
-
 export const runAutoSeed = async () => {
   try {
     await updateEarnedLeaveToPaidLeave();

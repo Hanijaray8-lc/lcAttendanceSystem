@@ -37,7 +37,7 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import dailyReportRoutes from './routes/dailyReportRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import { checkEmergencyEscalations } from './services/escalationService.js';
-import { updateEarnedLeaveToPaidLeave, updateCeoName, cleanTestAttendanceRecords } from './utils/seed.js';
+import { updateEarnedLeaveToPaidLeave, updateCeoName } from './utils/seed.js';
 
 const app = express();
 
@@ -50,7 +50,6 @@ if (process.env.VERCEL !== '1') {
   connectDB().then(() => {
     updateEarnedLeaveToPaidLeave();
     updateCeoName();
-    cleanTestAttendanceRecords();
   }).catch((err) => {
     console.error('[DB Init Error]', err.message);
   });
