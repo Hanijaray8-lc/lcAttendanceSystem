@@ -34,6 +34,38 @@ const formatDepartmentName = (dept, fallback = 'Engineering') => {
   return fallback;
 };
 
+// Robust date helper for formatting in IST / local time
+const getReportDateStr = (dateVal) => {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+  } catch (e) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+};
+
+// Robust multi-timezone matching so reports on the same day are never missed
+const isSameDayReport = (rep, targetDateStr) => {
+  if (!rep || !targetDateStr) return false;
+  const dates = [rep.date, rep.createdAt, rep.updatedAt].filter(Boolean);
+  return dates.some((dt) => {
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return false;
+    try {
+      if (new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d) === targetDateStr) return true;
+    } catch (e) {}
+    if (d.toISOString().split('T')[0] === targetDateStr) return true;
+    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (local === targetDateStr) return true;
+    return false;
+  });
+};
+
 export const DailyReportDetailsModal = ({
   isOpen,
   onClose,
@@ -41,7 +73,8 @@ export const DailyReportDetailsModal = ({
   reportsList: initialReportsList = [],
   currentUser,
   onUpdateSuccess,
-  onEditReport
+  onEditReport,
+  onOpenHistory
 }) => {
   const [currentReport, setCurrentReport] = React.useState(initialReport);
   const [reportsGroup, setReportsGroup] = React.useState(
@@ -60,6 +93,23 @@ export const DailyReportDetailsModal = ({
     setReportsGroup(list);
     setNewComment('');
     setReviewStatus(initialReport?.status || 'REVIEWED');
+
+    // Automatically check for all reports on the same day if only 1 report is present in group
+    if (initialReport) {
+      const targetUserId = initialReport.user?._id || initialReport.user;
+      const targetDateStr = getReportDateStr(initialReport.date);
+      if (targetUserId && targetDateStr) {
+        api.get(`/daily-reports/history/${targetUserId}`)
+          .then((res) => {
+            const allReports = res.data?.data?.reports || [];
+            const sameDay = allReports.filter((r) => isSameDayReport(r, targetDateStr));
+            if (sameDay.length > 1) {
+              setReportsGroup(sameDay);
+            }
+          })
+          .catch(() => {});
+      }
+    }
   }, [initialReport, initialReportsList]);
 
   if (!currentReport) return null;
@@ -161,10 +211,8 @@ export const DailyReportDetailsModal = ({
       const res = await api.get(`/daily-reports/history/${targetUserId}`);
       const historyReports = res.data?.data?.reports || [];
       
-      // Find all reports for the selected date
-      const matchingReports = historyReports.filter(r => 
-        new Date(r.date).toISOString().split('T')[0] === selectedDate
-      );
+      // Find all reports for the selected date using robust timezone comparison
+      const matchingReports = historyReports.filter(r => isSameDayReport(r, selectedDate));
       
       if (matchingReports.length > 0) {
         setReportsGroup(matchingReports);
@@ -298,7 +346,7 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
               <div className="relative flex items-center flex-1 sm:flex-initial min-w-[140px]">
                 <input
                   type="date"
-                  value={new Date(currentReport.date).toISOString().split('T')[0]}
+                  value={getReportDateStr(currentReport.date)}
                   onChange={handleDateChange}
                   title="Filter Report by Date"
                   className="relative w-full sm:w-auto pl-4 pr-9 py-1.5 rounded-full bg-white/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-extrabold border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-8 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-20"
@@ -314,6 +362,22 @@ Generated via Life Changers Ind LCM Portal on ${new Date().toLocaleString()}
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                 {currentReport.status}
               </span>
+
+              {onOpenHistory && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    const uid = currentReport.user?._id || currentReport.user;
+                    onOpenHistory(uid);
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:scale-105 shrink-0"
+                  title="View all submitted reports across all dates"
+                >
+                  <History className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>All History</span>
+                </button>
+              )}
             </div>
           </div>
 
