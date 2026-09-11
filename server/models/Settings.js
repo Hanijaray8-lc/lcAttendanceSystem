@@ -40,6 +40,10 @@ const settingsSchema = new mongoose.Schema(
     notificationEmailEnabled: {
       type: Boolean,
       default: true
+    },
+    testAttendanceCleaned: {
+      type: Boolean,
+      default: false
     }
   },
   {

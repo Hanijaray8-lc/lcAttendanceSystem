@@ -39,7 +39,8 @@ import {
   X,
   Download,
   FileSpreadsheet,
-  BarChart3
+  BarChart3,
+  Trash2
 } from 'lucide-react';
 
 const CARD_THEMES = [
@@ -753,6 +754,19 @@ export const Attendance = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleResetTestData = async () => {
+    if (window.confirm("⚠️ Clear all test attendance records for a fresh real-time start? (This cannot be undone)")) {
+      try {
+        const res = await api.delete('/attendance/reset-all');
+        alert(res.data?.message || 'Test attendance records successfully cleared!');
+        fetchAttendanceLogs();
+        fetchTodayStatus();
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to reset test records');
+      }
+    }
+  };
+
   const handleOpenHistoryModal = (empGroup) => {
     setHistoryModalEmp(empGroup);
     setModalSearch('');
@@ -1409,6 +1423,16 @@ export const Attendance = () => {
                   <Download className="w-3.5 h-3.5 shrink-0" />
                   <span className="hidden sm:inline ml-1.5">Download</span>
                 </button>
+                {['CEO', 'ADMIN'].includes(user?.role) && (
+                  <button
+                    onClick={handleResetTestData}
+                    title="Clear old test records to start fresh with real employee data"
+                    className="flex items-center justify-center p-1.5 px-2.5 sm:px-3.5 sm:py-2 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-xs hover:scale-105 whitespace-nowrap"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="hidden sm:inline ml-1.5">Reset Test Logs</span>
+                  </button>
+                )}
               </div>
             )}
             </div>
