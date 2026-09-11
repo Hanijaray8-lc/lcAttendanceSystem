@@ -236,10 +236,12 @@ export const DailyReports = () => {
     setIsDetailsModalOpen(true);
   };
 
-  // Metrics Calculations
-  const totalTrackedCount = metrics.totalTracked || employeeStatuses.length;
+  // Metrics Calculations (Counting unique employees, not report documents)
+  const totalTrackedCount = employeeStatuses.length > 0 ? employeeStatuses.length : (metrics.totalTracked || 0);
   const reviewedCount = reports.filter((r) => r.status === 'REVIEWED' || r.status === 'APPROVED').length;
-  const pendingSubmissionCount = metrics.pendingCount || employeeStatuses.filter((e) => !e.hasSubmitted).length;
+  const pendingSubmissionCount = employeeStatuses.length > 0
+    ? employeeStatuses.filter((e) => !e.hasSubmitted).length
+    : (metrics.pendingCount ?? 0);
 
   return (
     <div className="space-y-6 pb-28 sm:pb-8 relative">

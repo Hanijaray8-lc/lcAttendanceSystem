@@ -222,14 +222,18 @@ export const getDailyReports = asyncHandler(async (req, res, next) => {
     });
   }
 
+  const submittedEmployees = employeeStatuses.filter((item) => item.hasSubmitted).length;
+  const pendingEmployees = employeeStatuses.filter((item) => !item.hasSubmitted).length;
+
   res.status(200).json({
     status: 'success',
     data: {
       reports,
       employeeStatuses,
       totalTracked: trackingUsers.length,
-      submittedCount: reports.length,
-      pendingCount: trackingUsers.length - reports.length
+      submittedCount: submittedEmployees,
+      pendingCount: pendingEmployees,
+      totalReportsSubmitted: reports.length
     }
   });
 });
