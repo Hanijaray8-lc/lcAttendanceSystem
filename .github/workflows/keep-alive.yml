@@ -1,0 +1,16 @@
+name: Keep Render Server Awake
+
+on:
+  schedule:
+    # Runs every 14 minutes (Render sleeps at 15 minutes of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Health Check
+        run: |
+          echo "Pinging Render backend..."
+          curl -s -f "https://lcattendancesystem.onrender.com/api/health" || echo "Ping attempted"

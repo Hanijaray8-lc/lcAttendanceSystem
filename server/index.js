@@ -204,6 +204,19 @@ if (process.env.VERCEL !== '1') {
     checkEmergencyEscalations();
   }, ESCALATION_INTERVAL);
   console.log(`🚨 [Emergency Escalation] Active - checking every ${ESCALATION_INTERVAL / 1000}s`);
+
+  // Render Keep-Alive Service: Pings public URL every 10 minutes to prevent cold sleep
+  const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || 'https://lcattendancesystem.onrender.com';
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${KEEP_ALIVE_URL}/api/health`);
+      if (res.ok) {
+        console.log(`[Keep-Alive] Ping sent to ${KEEP_ALIVE_URL}/api/health at ${new Date().toLocaleTimeString()}`);
+      }
+    } catch (err) {
+      console.warn(`[Keep-Alive Warning]`, err.message);
+    }
+  }, 10 * 60 * 1000); // Every 10 minutes
 }
 
 const PORT = process.env.PORT || 5000;
