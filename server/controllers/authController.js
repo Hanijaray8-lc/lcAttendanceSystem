@@ -17,48 +17,33 @@ export const login = asyncHandler(async (req, res, next) => {
   const searchInput = email.trim();
   const lowerSearch = searchInput.toLowerCase();
   const username = lowerSearch.split('@')[0];
+  const escapedInput = searchInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const exactNameRegex = new RegExp(`^${escapedInput}$`, 'i');
 
-  // 1. Check if input is a CEO login attempt (Alban, Santhosh, CEO, EMP001, etc.)
-  const isCeoAttempt = 
-    lowerSearch.includes('alban') || 
-    lowerSearch.includes('santhosh') || 
-    lowerSearch === 'ceo@enterprise.com' || 
-    searchInput.toUpperCase() === 'EMP001' || 
-    username === 'ceo';
+  // 1. Find user by exact identifier: email, employeeId, username, or corporate email alias
+  let user = await User.findOne({
+    $or: [
+      { email: lowerSearch },
+      { employeeId: searchInput.toUpperCase() },
+      { employeeId: searchInput },
+      { username: lowerSearch },
+      { username: exactNameRegex },
+      { email: `${username}@lifechangersind.com` }
+    ],
+    isDeleted: false
+  })
+    .select('+password')
+    .populate('department', 'name code')
+    .populate('designation', 'name code')
+    .populate('reportingManager', 'firstName lastName email');
 
-  let user = null;
-
-  if (isCeoAttempt) {
-    user = await User.findOne({
-      $or: [
-        { role: 'CEO' },
-        { email: 'albansanthosh@enterprise.com' },
-        { email: 'ceo@enterprise.com' },
-        { employeeId: 'EMP001' }
-      ]
-    })
-      .select('+password')
-      .populate('department', 'name code')
-      .populate('designation', 'name code')
-      .populate('reportingManager', 'firstName lastName email');
-  }
-
-  // 2. If not CEO or CEO not found yet, search standard user by email, employeeId, or name
+  // 2. Fallback for general name search (case-insensitive)
   if (!user) {
-    const escapedInput = searchInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const nameRegex = new RegExp(escapedInput, 'i');
-
+    const looseNameRegex = new RegExp(escapedInput, 'i');
     user = await User.findOne({
       $or: [
-        { username: lowerSearch },
-        { username: nameRegex },
-        { email: lowerSearch },
-        { employeeId: searchInput.toUpperCase() },
-        { employeeId: searchInput },
-        { email: `${username}@enterprise.com` },
-        { email: `${username}@lifechangersind.com` },
-        { firstName: nameRegex },
-        { lastName: nameRegex }
+        { firstName: looseNameRegex },
+        { lastName: looseNameRegex }
       ],
       isDeleted: false
     })
@@ -68,40 +53,12 @@ export const login = asyncHandler(async (req, res, next) => {
       .populate('reportingManager', 'firstName lastName email');
   }
 
-  // 3. Auto-provision CEO account if missing
-  if (!user && isCeoAttempt) {
-    const hashedPassword = await bcrypt.hash('Alban@123', 12);
-    user = await User.create({
-      employeeId: 'EMP001',
-      firstName: 'Alban',
-      lastName: 'Santhosh A',
-      email: 'albansanthosh@enterprise.com',
-      password: hashedPassword,
-      plainPassword: 'Alban@123',
-      role: 'CEO',
-      status: 'ACTIVE'
-    });
-    user = await User.findById(user._id).select('+password');
-  }
-
   if (!user) {
     return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }
 
-  // 4. Password validation — same for all users including CEO
-  // New password set pannina, adhe password than work aagum
-  let isValidPassword = await user.comparePassword(password);
-
-  if (isValidPassword && (user.role === 'CEO' || user.employeeId === 'EMP001')) {
-    // Only fill in missing fields — do NOT overwrite password or other custom data
-    const updateFields = { status: 'ACTIVE' };
-    if (!user.username) updateFields.username = 'Alban Santhosh';
-    if (!user.email) updateFields.email = 'albansanthosh@enterprise.com';
-
-    await User.updateOne({ _id: user._id }, { $set: updateFields });
-    user.status = 'ACTIVE';
-  }
-
+  // 4. Secure bcrypt validation — verifies the user's current password stored in DB
+  const isValidPassword = await user.comparePassword(password);
   if (!isValidPassword) {
     return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }

@@ -43,32 +43,15 @@ export const updateEarnedLeaveToPaidLeave = async () => {
 };
 
 export const updateCeoName = async () => {
-  try {
-    const ceo = await User.findOne({ $or: [{ role: 'CEO' }, { employeeId: 'EMP001' }] });
-    if (ceo) {
-      // Only fill in missing fields — never overwrite existing username, email, or password
-      let modified = false;
-      if (!ceo.username) { ceo.username = 'Alban Santhosh'; modified = true; }
-      if (!ceo.email) { ceo.email = 'albansanthosh@enterprise.com'; modified = true; }
-      if (!ceo.firstName) { ceo.firstName = 'Alban'; modified = true; }
-      if (!ceo.lastName) { ceo.lastName = 'Santhosh A'; modified = true; }
-      if (modified) await ceo.save({ validateBeforeSave: false });
-    }
-    console.log('[Seed Engine] Verified CEO account for Alban Santhosh A (no overwrite)');
-  } catch (err) {
-    console.error('[CEO Name Migration Error]', err);
-  }
+  // Safe no-op: never modify or overwrite CEO credentials or accounts
+  return;
 };
 
 export const runAutoSeed = async () => {
   try {
-    await updateEarnedLeaveToPaidLeave();
-    await updateCeoName();
-    // NOTE: clearAllLeaveRequests is NOT called here anymore.
-    // It was a one-time cleanup and should not run on every server start.
-
+    const userCount = await User.countDocuments();
     const deptCount = await Department.countDocuments();
-    if (deptCount > 0) {
+    if (userCount > 0 || deptCount > 0) {
       return;
     }
 
@@ -138,120 +121,6 @@ export const runAutoSeed = async () => {
       grade: 'L3'
     });
 
-    // 4. Create Production Demo Accounts safely (never overwrite existing passwords)
-    const existingCeo = await User.findOne({ $or: [{ email: 'ceo@enterprise.com' }, { email: 'albansanthosh@enterprise.com' }, { employeeId: 'EMP001' }] });
-    if (!existingCeo) {
-      await User.create({
-        employeeId: 'EMP001',
-        firstName: 'Alban',
-        lastName: 'Santhosh A',
-        username: 'Alban Santhosh',
-        email: 'albansanthosh@enterprise.com',
-        password: 'Alban@123',
-        role: 'CEO',
-        department: engineering._id,
-        designation: techLead._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    const existingHr = await User.findOne({ $or: [{ email: 'hr@enterprise.com' }, { employeeId: 'EMP002' }] });
-    if (!existingHr) {
-      await User.create({
-        employeeId: 'EMP002',
-        firstName: 'Sarah',
-        lastName: 'Jenkins',
-        email: 'hr@enterprise.com',
-        password: 'Password@123',
-        role: 'HR',
-        department: hrDept._id,
-        designation: hrManagerDesig._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    const existingManager = await User.findOne({ $or: [{ email: 'teamlead@enterprise.com' }, { employeeId: 'EMP003' }] });
-    let managerUser = existingManager;
-    if (!existingManager) {
-      managerUser = await User.create({
-        employeeId: 'EMP003',
-        firstName: 'David',
-        lastName: 'Miller',
-        email: 'teamlead@enterprise.com',
-        password: 'Password@123',
-        role: 'TEAM_LEAD',
-        department: engineering._id,
-        designation: techLead._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    const existingEmp = await User.findOne({ $or: [{ email: 'employee@enterprise.com' }, { employeeId: 'EMP004' }] });
-    if (!existingEmp) {
-      await User.create({
-        employeeId: 'EMP004',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'employee@enterprise.com',
-        password: 'Password@123',
-        role: 'EMPLOYEE',
-        department: engineering._id,
-        designation: dev._id,
-        reportingManager: managerUser?._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    // Create Sales & Business Demo Employees
-    const existingSalesManager = await User.findOne({ $or: [{ email: 'sales.lead@enterprise.com' }, { employeeId: 'EMP005' }] });
-    let salesManager = existingSalesManager;
-    if (!existingSalesManager) {
-      salesManager = await User.create({
-        employeeId: 'EMP005',
-        firstName: 'Robert',
-        lastName: 'Vance',
-        email: 'sales.lead@enterprise.com',
-        password: 'Password@123',
-        role: 'TEAM_LEAD',
-        department: salesDept._id,
-        designation: salesManagerDesig._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    const existingEmp6 = await User.findOne({ $or: [{ email: 'emily.watson@enterprise.com' }, { employeeId: 'EMP006' }] });
-    if (!existingEmp6) {
-      await User.create({
-        employeeId: 'EMP006',
-        firstName: 'Emily',
-        lastName: 'Watson',
-        email: 'emily.watson@enterprise.com',
-        password: 'Password@123',
-        role: 'EMPLOYEE',
-        department: salesDept._id,
-        designation: accountExecDesig._id,
-        reportingManager: salesManager?._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    const existingEmp7 = await User.findOne({ $or: [{ email: 'michael.chang@enterprise.com' }, { employeeId: 'EMP007' }] });
-    if (!existingEmp7) {
-      await User.create({
-        employeeId: 'EMP007',
-        firstName: 'Michael',
-        lastName: 'Chang',
-        email: 'michael.chang@enterprise.com',
-        password: 'Password@123',
-        role: 'EMPLOYEE',
-        department: salesDept._id,
-        designation: accountExecDesig._id,
-        reportingManager: salesManager?._id,
-        status: 'ACTIVE'
-      });
-    }
-
-    console.log('[Seed Engine] Created default accounts: ceo@enterprise.com (CEO@123), hr@enterprise.com (Password@123)');
 
     // 5. Create Leave Types
     const casualLeave = await LeaveType.create({
