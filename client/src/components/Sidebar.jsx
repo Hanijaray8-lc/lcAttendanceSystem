@@ -111,7 +111,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
       )}
 
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 h-[100dvh] w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none ${
+        className={`fixed top-0 left-0 bottom-0 z-50 h-[100dvh] w-64 xl:w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

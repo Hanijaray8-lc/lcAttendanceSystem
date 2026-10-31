@@ -9,7 +9,9 @@ import {
   resetPassword,
   saveFcmToken,
   changePassword,
-  logout
+  logout,
+  registerOwnFace,
+  removeOwnFace
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -49,5 +51,7 @@ router.post('/fcm-token', protect, saveFcmToken);
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
+router.post('/register-face', protect, registerOwnFace);
+router.delete('/remove-face', protect, removeOwnFace);
 
 export default router;

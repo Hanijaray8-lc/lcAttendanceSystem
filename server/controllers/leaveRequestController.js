@@ -58,7 +58,10 @@ export const getLeaveRequests = asyncHandler(async (req, res, next) => {
     }
   }
 
-  if (status) {    if (status === 'APPROVED') {
+  if (status) {
+    if (status === 'PENDING') {
+      query.status = { $in: ['PENDING', 'ESCALATED_TO_HR', 'TEAM_LEAD_APPROVED'] };
+    } else if (status === 'APPROVED') {
       query.status = { $in: ['HR_APPROVED', 'ADMIN_APPROVED', 'CEO_APPROVED'] };
     } else if (status === 'REJECTED') {
       query.status = { $in: ['TEAM_LEAD_REJECTED', 'HR_REJECTED', 'ADMIN_REJECTED', 'CEO_REJECTED'] };
@@ -71,12 +74,13 @@ export const getLeaveRequests = asyncHandler(async (req, res, next) => {
   const skip = (Number(page) - 1) * Number(limit);
   const total = await LeaveRequest.countDocuments(query);
   const leaves = await LeaveRequest.find(query)
-    .populate('user', 'firstName lastName email employeeId profileImage department designation reportingManager')
+    .populate('user', 'firstName lastName email employeeId profileImage department designation reportingManager role')
     .populate({
       path: 'user',
       populate: [
         { path: 'department', select: 'name code' },
-        { path: 'designation', select: 'name code' }
+        { path: 'designation', select: 'name code' },
+        { path: 'reportingManager', select: 'firstName lastName email role' }
       ]
     })
     .populate('leaveType', 'name code colorBadge maxDays paidLeave')
@@ -110,7 +114,7 @@ export const getLeaveRequestById = asyncHandler(async (req, res, next) => {
 });
 
 export const applyLeave = asyncHandler(async (req, res, next) => {
-  const { leaveType, fromDate, toDate, isHalfDay, halfDayType, isEmergency, reason, contactNumber, attachments } = req.body;
+  const { leaveType, fromDate, toDate, isHalfDay, halfDayType, isPermission, permissionHours, permissionTimeSlot, isEmergency, reason, contactNumber, attachments } = req.body;
   const userId = req.user._id;
 
   const start = new Date(fromDate);
@@ -130,7 +134,13 @@ export const applyLeave = asyncHandler(async (req, res, next) => {
   // Calculate day count
   const diffTime = Math.abs(end - start);
   let daysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  if (isHalfDay) daysCount = 0.5;
+  if (isHalfDay) {
+    daysCount = 0.5;
+  } else if (isPermission) {
+    // 1 Hr = 0.125 days, 2 Hrs = 0.25 days, 3 Hrs = 0.375 days, 4 Hrs = 0.5 days (or default 0.25)
+    const hrs = Number(permissionHours) || 2;
+    daysCount = Math.round((hrs / 8) * 1000) / 1000;
+  }
 
   // Fix 5: Prevent overlapping leave requests — exclude ALL rejected/cancelled statuses
   const overlapping = await LeaveRequest.findOne({
@@ -187,6 +197,9 @@ export const applyLeave = asyncHandler(async (req, res, next) => {
     daysCount,
     isHalfDay: !!isHalfDay,
     halfDayType: halfDayType || 'NONE',
+    isPermission: !!isPermission,
+    permissionHours: isPermission ? (Number(permissionHours) || 2) : 0,
+    permissionTimeSlot: isPermission ? (permissionTimeSlot || '') : '',
     isEmergency: !!isEmergency,
     reason,
     contactNumber,
@@ -320,21 +333,27 @@ export const approveLeave = asyncHandler(async (req, res, next) => {
       timestamp: now
     });
   } else if (applicantRole === 'EMPLOYEE') {
-    // Sequential Flow: TL -> HR -> Admin (ADMIN) — Final for Employee, no CEO
+    // Sequential Flow: TL (or Direct Reporting Manager) -> HR -> Admin (ADMIN) — Final for Employee, no CEO
+    const isDirectManager = leave.user?.reportingManager && (
+      leave.user.reportingManager.toString() === req.user._id.toString() ||
+      leave.user.reportingManager._id?.toString() === req.user._id.toString()
+    );
+
     if (leave.status === 'PENDING' || leave.status === 'ESCALATED_TO_HR') {
-      if (!['TEAM_LEAD', 'CEO'].includes(reviewerRole)) {
+      if (!['TEAM_LEAD', 'CEO'].includes(reviewerRole) && !isDirectManager) {
         return next(new AppError('Employee leave request requires TL (Manager) approval first.', 403));
       }
+
       leave.status = 'TEAM_LEAD_APPROVED';
       leave.approvalFlow.push({
         reviewer: req.user._id,
         reviewerRole: reviewerRole,
         action: 'TEAM_LEAD_APPROVE',
-        comments: comments || 'Approved by Team Lead (Manager). Pending HR approval.',
+        comments: comments || (isDirectManager && reviewerRole === 'HR' ? 'Approved by Manager (TL). Pending HR approval.' : 'Approved by Team Lead (Manager). Pending HR approval.'),
         timestamp: now
       });
     } else if (leave.status === 'TEAM_LEAD_APPROVED') {
-      if (!['HR', 'CEO'].includes(reviewerRole)) {
+      if (!['HR', 'CEO'].includes(reviewerRole) && !isDirectManager) {
         return next(new AppError('Employee leave request requires HR approval next.', 403));
       }
       leave.status = 'HR_APPROVED';

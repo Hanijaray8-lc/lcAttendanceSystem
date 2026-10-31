@@ -32,7 +32,7 @@ export const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
           setUnreadCount(res.data.data.unreadCount || 0);
         }
       } catch (err) {
-        console.error(err);
+        // Silently handle background notification poll errors
       }
     };
 

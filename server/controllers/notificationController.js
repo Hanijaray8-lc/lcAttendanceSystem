@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Notification } from '../models/Notification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -32,7 +33,7 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   if (id === 'all') {
     await Notification.updateMany({ recipient: req.user._id, isRead: false }, { isRead: true });
-  } else {
+  } else if (mongoose.Types.ObjectId.isValid(id)) {
     await Notification.findByIdAndUpdate(id, { isRead: true });
   }
 
@@ -45,6 +46,10 @@ export const deleteNotification = asyncHandler(async (req, res, next) => {
   if (id === 'all') {
     await Notification.deleteMany({ recipient: req.user._id });
     return res.status(200).json({ status: 'success', message: 'All notifications cleared successfully' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(200).json({ status: 'success', message: 'Test notification deleted' });
   }
 
   const notification = await Notification.findById(id);
@@ -61,4 +66,19 @@ export const deleteNotification = asyncHandler(async (req, res, next) => {
   await notification.deleteOne();
 
   res.status(200).json({ status: 'success', message: 'Notification deleted successfully' });
+});
+
+export const createTestNotification = asyncHandler(async (req, res, next) => {
+  const newNotification = await Notification.safeCreate({
+    recipient: req.user._id,
+    title: '🚀 Test Notification',
+    message: 'Push & In-App notifications are active and working properly on your account!',
+    type: 'SYSTEM',
+    targetUrl: '/notifications'
+  });
+
+  res.status(201).json({
+    status: 'success',
+    data: { notification: newNotification }
+  });
 });

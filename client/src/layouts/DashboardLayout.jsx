@@ -23,7 +23,7 @@ export const DashboardLayout = () => {
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-72 flex flex-col h-full min-w-0 overflow-hidden">
+      <div className="flex-1 lg:pl-64 xl:pl-72 flex flex-col h-full min-w-0 overflow-hidden">
         {/* Top Navbar */}
         <Navbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} sidebarOpen={sidebarOpen} />
 

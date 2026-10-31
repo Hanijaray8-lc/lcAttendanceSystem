@@ -6,6 +6,7 @@ import { AppError } from '../utils/appError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { sendResetEmail } from '../utils/email.js';
+import { encryptFaceDescriptor, decryptFaceDescriptor } from '../utils/encryption.js';
 
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
@@ -28,7 +29,8 @@ export const login = asyncHandler(async (req, res, next) => {
       { employeeId: searchInput },
       { username: lowerSearch },
       { username: exactNameRegex },
-      { email: `${username}@lifechangersind.com` }
+      { email: `${username}@lifechangersind.com` },
+      { email: `${username}@enterprise.com` }
     ],
     isDeleted: false
   })
@@ -36,6 +38,28 @@ export const login = asyncHandler(async (req, res, next) => {
     .populate('department', 'name code')
     .populate('designation', 'name code')
     .populate('reportingManager', 'firstName lastName email');
+
+  // CEO Flexible Lookup Fallback
+  const isCeoLoginAttempt =
+    lowerSearch.includes('ceo') ||
+    searchInput.toUpperCase() === 'EMP001' ||
+    username === 'ceo';
+
+  if (!user && isCeoLoginAttempt) {
+    user = await User.findOne({
+      $or: [
+        { role: 'CEO' },
+        { employeeId: 
+          'EMP001' },
+        { email: /ceo/i }
+      ],
+      isDeleted: false
+    })
+      .select('+password')
+      .populate('department', 'name code')
+      .populate('designation', 'name code')
+      .populate('reportingManager', 'firstName lastName email');
+  }
 
   // 2. Fallback for general name search (case-insensitive)
   if (!user) {
@@ -59,12 +83,62 @@ export const login = asyncHandler(async (req, res, next) => {
 
   // 4. Secure bcrypt validation — verifies the user's current password stored in DB
   const isValidPassword = await user.comparePassword(password);
+
   if (!isValidPassword) {
     return next(new AppError('Invalid username or password. Please verify your credentials.', 401));
   }
 
   if (user.status !== 'ACTIVE') {
     return next(new AppError('Your account is inactive. Please contact HR.', 403));
+  }
+
+  // 5. Executive CEO Face ID Verification Check
+  if (user.role === 'CEO' && user.isFaceRegistered) {
+    const { faceDescriptor } = req.body;
+    if (!faceDescriptor) {
+      return res.status(200).json({
+        status: 'face_verification_required',
+        requireFace: true,
+        message: 'Executive Biometric Face ID verification required to complete login.',
+        data: {
+          requireFace: true,
+          userId: user._id,
+          userName: `${user.firstName} ${user.lastName}`,
+          role: user.role
+        }
+      });
+    }
+
+    // Retrieve encrypted face descriptor
+    const userWithFace = await User.findById(user._id).select('+faceDescriptor');
+    if (!userWithFace?.faceDescriptor) {
+      return next(new AppError('Face Lock data not found or corrupted. Please contact administration.', 400));
+    }
+
+    let storedDescriptor;
+    try {
+      storedDescriptor = decryptFaceDescriptor(userWithFace.faceDescriptor);
+    } catch (e) {
+      return next(new AppError('Failed to decrypt biometric credentials.', 500));
+    }
+
+    if (!storedDescriptor || !Array.isArray(storedDescriptor) || storedDescriptor.length !== 128 || !Array.isArray(faceDescriptor) || faceDescriptor.length !== 128) {
+      return next(new AppError('Invalid biometric scan data. Please scan face again.', 400));
+    }
+
+    let sum = 0;
+    for (let i = 0; i < 128; i++) {
+      sum += Math.pow(storedDescriptor[i] - faceDescriptor[i], 2);
+    }
+    const distance = Math.sqrt(sum);
+    console.log(`[CEO Login Face Verification] User: ${user.email}, Distance: ${distance.toFixed(4)}`);
+
+    if (isNaN(distance) || distance > 0.30) {
+      console.log(`[CEO Login Face FAILED] Distance ${distance.toFixed(4)} exceeds threshold 0.30`);
+      return next(new AppError('Biometric verification failed. Face does not match registered CEO profile.', 401));
+    }
+
+    console.log(`[CEO Login Face SUCCESS] Distance ${distance.toFixed(4)} within threshold 0.30`);
   }
 
   const { accessToken, refreshToken } = generateTokens(user);
@@ -335,6 +409,83 @@ export const logout = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'Logged out successfully'
+  });
+});
+
+// Register or Update Own Face ID (Executive Biometrics)
+export const registerOwnFace = asyncHandler(async (req, res, next) => {
+  const { faceDescriptor } = req.body;
+
+  if (!faceDescriptor || !Array.isArray(faceDescriptor) || faceDescriptor.length === 0) {
+    return next(new AppError('Valid face scan descriptor required.', 400));
+  }
+
+  const encrypted = encryptFaceDescriptor(faceDescriptor);
+  if (!encrypted) {
+    return next(new AppError('Failed to encrypt biometric data. Please try again.', 500));
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return next(new AppError('User not found.', 404));
+  }
+
+  user.faceDescriptor = encrypted;
+  user.isFaceRegistered = true;
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await AuditLog.create({
+      user: user._id,
+      userName: `${user.firstName} ${user.lastName}`,
+      userRole: user.role,
+      action: 'FACE_LOCK_REGISTER',
+      module: 'AUTHENTICATION',
+      details: `Executive Biometric Face ID registered/updated for ${user.firstName} ${user.lastName} (${user.role})`
+    });
+  } catch (auditErr) {
+    console.error('AuditLog error in registerOwnFace:', auditErr);
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Face ID registered successfully!',
+    data: {
+      isFaceRegistered: true
+    }
+  });
+});
+
+// Remove Own Face ID
+export const removeOwnFace = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return next(new AppError('User not found.', 404));
+  }
+
+  user.faceDescriptor = '';
+  user.isFaceRegistered = false;
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await AuditLog.create({
+      user: user._id,
+      userName: `${user.firstName} ${user.lastName}`,
+      userRole: user.role,
+      action: 'FACE_LOCK_REMOVE',
+      module: 'AUTHENTICATION',
+      details: `Executive Biometric Face ID removed for ${user.firstName} ${user.lastName} (${user.role})`
+    });
+  } catch (auditErr) {
+    console.error('AuditLog error in removeOwnFace:', auditErr);
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Face ID removed successfully.',
+    data: {
+      isFaceRegistered: false
+    }
   });
 });
 

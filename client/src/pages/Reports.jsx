@@ -60,29 +60,106 @@ export const Reports = () => {
 
   const handleExport = async (format) => {
     try {
-      const res = await api.get('/reports/export', { params: { format } });
+      const params = { year, format };
+      if (status) params.status = status;
+      if (selectedCustomDate) params.date = selectedCustomDate;
+
+      const res = await api.get('/reports/export', { params });
       const data = res.data.data;
-      
+
       if (!data || data.length === 0) {
         alert('No data available to export.');
         return;
       }
 
-      // Client-side CSV download trigger
-      const keys = Object.keys(data[0] || {});
-      const csvContent =
-        'data:text/csv;charset=utf-8,' +
-        [keys.join(','), ...data.map((row) => keys.map((k) => `"${row[k]}"`).join(','))].join('\n');
+      if (format === 'pdf') {
+        const printWindow = window.open('', '_blank');
+        const rowsHtml = data
+          .map(
+            (r, idx) => `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${idx + 1}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">${r['Employee ID'] || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${r['Employee Name'] || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">${r['Leave Type'] || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">${r['From Date']} - ${r['To Date']}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${r['Days']}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">${r['Status']}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">${r['Reason'] || '-'}</td>
+          </tr>
+        `
+          )
+          .join('');
 
-      const encodedUri = encodeURI(csvContent);
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Enterprise Leave Report - ${year}</title>
+              <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; color: #1e293b; }
+                h1 { color: #0f172a; font-size: 22px; margin-bottom: 4px; }
+                p { color: #64748b; font-size: 13px; margin-top: 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                th { background-color: #2563eb; color: white; padding: 10px; text-align: left; }
+                tr:nth-child(even) { background-color: #f8fafc; }
+              </style>
+            </head>
+            <body>
+              <h1>Enterprise Leave Analytics Report</h1>
+              <p>Generated on ${new Date().toLocaleDateString()} | Total Records: ${data.length}</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Emp ID</th>
+                    <th>Employee Name</th>
+                    <th>Leave Type</th>
+                    <th>Duration</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+              <script>
+                window.onload = function() { window.print(); };
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        return;
+      }
+
+      // CSV / Excel Blob Download Trigger
+      const keys = Object.keys(data[0] || {});
+      const csvLines = [
+        keys.join(','),
+        ...data.map((row) =>
+          keys
+            .map((k) => {
+              const val = String(row[k] ?? '').replace(/"/g, '""');
+              return `"${val}"`;
+            })
+            .join(',')
+        )
+      ].join('\r\n');
+
+      const blob = new Blob([csvLines], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
+      link.href = url;
       link.setAttribute('download', `Enterprise_Leave_Report_${year}.${format === 'excel' ? 'xlsx' : 'csv'}`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Failed to generate export file.');
+      console.error('[Export Error]', err);
+      alert('Failed to generate export file: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -188,15 +265,15 @@ export const Reports = () => {
               onClick={() => handleOpenDetails(r)}
               className="glass-card p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 items-center gap-3 md:gap-4 cursor-pointer hover:border-primary/50 transition-all group"
             >
-              {/* Employee Avatar & Info: 4 Columns */}
-              <div className="md:col-span-4 flex items-center justify-between md:justify-start gap-3 min-w-0">
+              {/* Employee Avatar & Info: 3 Columns on Tablet, 3 on Desktop */}
+              <div className="md:col-span-3 xl:col-span-3 flex items-center justify-between md:justify-start gap-3 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <UserAvatar user={r.user} size="w-10 h-10 text-xs shrink-0" />
                   <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors text-xs sm:text-base truncate">
+                    <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors text-xs sm:text-sm md:text-base truncate">
                       {r.user?.firstName} {r.user?.lastName}
                     </h3>
-                    <p className="text-[10px] text-slate-400 font-mono font-semibold">{r.user?.employeeId || 'N/A'}</p>
+                    <p className="text-[10px] text-slate-400 font-mono font-semibold truncate">{r.user?.employeeId || 'N/A'}</p>
                   </div>
                 </div>
 
@@ -206,22 +283,22 @@ export const Reports = () => {
                 </div>
               </div>
 
-              {/* Leave Type & Days Column: 3 Columns */}
-              <div className="hidden md:flex md:col-span-3 items-center gap-2">
-                <span className="font-bold text-xs text-slate-900 dark:text-white">{r.leaveType?.name}</span>
-                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-extrabold">
+              {/* Leave Type & Days Column: 3 Columns on Tablet, 2 on Desktop */}
+              <div className="hidden md:flex md:col-span-3 xl:col-span-2 items-center gap-2 min-w-0">
+                <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{r.leaveType?.name}</span>
+                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-extrabold shrink-0">
                   {r.daysCount} Day{r.daysCount > 1 ? 's' : ''}
                 </span>
               </div>
 
-              {/* Date Period Column: 3 Columns */}
-              <div className="hidden md:flex md:col-span-3 items-center text-xs font-mono font-semibold text-slate-500">
+              {/* Date Period Column: 3 Columns on Tablet, 4 on Desktop */}
+              <div className="hidden md:flex md:col-span-3 xl:col-span-4 items-center text-xs font-mono font-semibold text-slate-500 min-w-0 shrink-0">
                 {new Date(r.fromDate).toLocaleDateString()} - {new Date(r.toDate).toLocaleDateString()}
               </div>
 
-              {/* Status & Action Arrow: 2 Columns */}
-              <div className="flex items-center justify-between md:justify-end gap-3 md:col-span-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-                <div className="hidden md:block">
+              {/* Status & Action Arrow: 3 Columns on Tablet, 3 on Desktop */}
+              <div className="flex items-center justify-between md:justify-end gap-2 md:col-span-3 xl:col-span-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800 min-w-0">
+                <div className="hidden md:block shrink-0">
                   <StatusBadge status={r.status} />
                 </div>
 

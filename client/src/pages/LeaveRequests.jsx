@@ -162,10 +162,10 @@ export const LeaveRequests = () => {
               onClick={() => handleOpenDetails(leave)}
               className="glass-card p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 items-center gap-3 md:gap-4 cursor-pointer hover:border-primary/50 transition-all group"
             >
-              {/* Applicant Info (Avatar, Name, Dept): 4 Columns */}
-              <div className="md:col-span-4 flex items-center justify-between md:justify-start gap-3 min-w-0">
+              {/* Applicant Info (Avatar, Name, Dept): 3 Columns */}
+              <div className="md:col-span-3 xl:col-span-3 flex items-center justify-between md:justify-start gap-3 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
-                  <UserAvatar user={leave.user} size="w-10 h-10 sm:w-11 sm:h-11 text-xs" />
+                  <UserAvatar user={leave.user} size="w-10 h-10 sm:w-11 sm:h-11 text-xs shrink-0" />
                   <div className="min-w-0">
                     <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors text-xs sm:text-sm md:text-base truncate">
                       {leave.user?.firstName} {leave.user?.lastName}
@@ -182,13 +182,13 @@ export const LeaveRequests = () => {
                 </div>
               </div>
 
-              {/* Status Badge Column: 3 Columns on Tablet & Desktop */}
-              <div className="hidden md:flex md:col-span-3 items-center">
+              {/* Status Badge Column: 3 Columns */}
+              <div className="hidden md:flex md:col-span-3 xl:col-span-3 items-center shrink-0">
                 <StatusBadge status={leave.status} applicantRole={leave.user?.role} />
               </div>
 
-              {/* Leave Type Column: 3 Columns on Tablet & Desktop */}
-              <div className="md:col-span-3 flex items-center gap-2 flex-wrap">
+              {/* Leave Type Column: 3 Columns */}
+              <div className="md:col-span-3 xl:col-span-3 flex items-center gap-2 flex-wrap min-w-0">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: leave.leaveType?.colorBadge || '#2563EB' }}
@@ -201,15 +201,17 @@ export const LeaveRequests = () => {
                 )}
               </div>
 
-              {/* Duration & Chevron Column: 2 Columns on Tablet & Desktop */}
-              <div className="md:col-span-2 flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-                <div className="text-left md:text-right">
+              {/* Duration & Chevron Column: 3 Columns */}
+              <div className="md:col-span-3 xl:col-span-3 flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
+                <div className="text-left md:text-right shrink-0">
                   <p className="text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
                     {new Date(leave.fromDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} -{' '}
                     {new Date(leave.toDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                   <p className="text-[10px] sm:text-[11px] font-extrabold text-primary md:text-right">
-                    {leave.daysCount} Day{leave.daysCount > 1 ? 's' : ''}
+                    {leave.isPermission
+                      ? `${leave.permissionHours || 2} Hour${(leave.permissionHours || 2) !== 1 ? 's' : ''}`
+                      : `${leave.daysCount} Day${leave.daysCount > 1 ? 's' : ''}`}
                   </p>
                 </div>
 

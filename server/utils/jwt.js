@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import jwt from 'jsonwebtoken';
 
 // CRITICAL SECURITY: Validate JWT secrets at startup - fail fast if missing

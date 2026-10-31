@@ -1,6 +1,16 @@
 import axios from 'axios';
 
-const rawApiUrl = import.meta.env.VITE_API_URL || '/api';
+// When running in production (e.g. Render/Vercel), always use relative '/api' to avoid Mixed Content & localhost issues
+const isLocalhost = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.startsWith('10.')
+);
+
+const rawApiUrl = isLocalhost
+  ? (import.meta.env.VITE_API_URL || '/api')
+  : '/api';
 
 const api = axios.create({
   baseURL: rawApiUrl,

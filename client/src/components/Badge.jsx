@@ -1,6 +1,7 @@
 import React from 'react';
 
-export const StatusBadge = ({ status, applicantRole }) => {  const styles = {
+export const StatusBadge = ({ status, applicantRole, isDualRole }) => {
+  const styles = {
     PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
     TEAM_LEAD_APPROVED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
     TEAM_LEAD_REJECTED: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
@@ -22,7 +23,7 @@ export const StatusBadge = ({ status, applicantRole }) => {  const styles = {
 
   const getPendingLabel = () => {
     switch (applicantRole) {
-      case 'EMPLOYEE': return 'Pending TL Approval';
+      case 'EMPLOYEE': return isDualRole ? 'Pending TL & HR Approval' : 'Pending TL Approval';
       case 'TEAM_LEAD': return 'Pending HR Approval';
       case 'HR': return 'Pending Admin Approval';
       case 'ADMIN': return 'Pending HR Approval';

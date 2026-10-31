@@ -3,6 +3,7 @@ import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/appError.js';
 import { decryptFaceDescriptor } from '../utils/encryption.js';
+import { runAutoCheckoutJob } from '../services/autoCheckoutService.js';
 
 // Get today's start and end date in IST (Asia/Kolkata timezone)
 const getTodayDateRange = () => {
@@ -100,14 +101,14 @@ const verifyUserFaceDescriptor = (user, submittedDescriptor) => {
   const distance = calculateEuclideanDistance(storedDescriptor, submittedDescriptor);
   console.log(`[Face Verification] User: ${user.email}, Role: ${user.role}, Distance: ${distance.toFixed(4)}`);
   
-  // STRICT threshold: 0.40 (0.50 was allowing false positives)
-  // This prevents unauthorized users from using similar-looking faces
-  if (isNaN(distance) || distance > 0.40) {
-    console.log(`[Face Verification FAILED] Distance ${distance.toFixed(4)} exceeds threshold 0.40`);
+  // ULTRA-STRICT threshold: 0.30 (prevents unauthorized similar-face access)
+  // This ensures only the registered user can clock in, no false positives
+  if (isNaN(distance) || distance > 0.30) {
+    console.log(`[Face Verification FAILED] Distance ${distance.toFixed(4)} exceeds threshold 0.30`);
     return { valid: false, message: 'Face verification failed! Face does not match the registered profile. Please use your own registered face.' };
   }
   
-  console.log(`[Face Verification SUCCESS] Distance ${distance.toFixed(4)} within threshold 0.40`);
+  console.log(`[Face Verification SUCCESS] Distance ${distance.toFixed(4)} within threshold 0.30`);
   return { valid: true, distance };
 };
 
@@ -117,6 +118,66 @@ const isTodayInIST = (dateVal) => {
   const todayISTStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
   const recordISTStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(dateVal));
   return todayISTStr === recordISTStr;
+};
+
+// Helper to get or cleanup previous day attendance, and fetch strictly today's attendance
+export const getStrictTodayAttendance = async (userId) => {
+  const { start, end } = getTodayDateRange();
+
+  // 1. Auto-cleanup any incomplete attendance record from a past day
+  const pastIncomplete = await Attendance.findOne({
+    user: userId,
+    $or: [{ clockOut: null }, { clockOut: { $exists: false } }],
+    $and: [
+      { date: { $lt: start } },
+      { clockIn: { $lt: start } }
+    ]
+  }).sort({ date: -1, createdAt: -1 });
+
+  if (pastIncomplete) {
+    const clockInDate = new Date(pastIncomplete.clockIn || pastIncomplete.date);
+    const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(clockInDate);
+    const autoCheckoutTime = new Date(`${istDateStr}T19:00:00.000+05:30`);
+
+    let diffMs = autoCheckoutTime - new Date(pastIncomplete.clockIn || autoCheckoutTime);
+    if (pastIncomplete.lunchOut && pastIncomplete.lunchIn) {
+      diffMs -= (new Date(pastIncomplete.lunchIn) - new Date(pastIncomplete.lunchOut));
+    }
+    if (pastIncomplete.extraBreakMs) {
+      diffMs -= pastIncomplete.extraBreakMs;
+    }
+    const totalHours = Math.max(0.1, Number((diffMs / (1000 * 60 * 60)).toFixed(2)));
+
+    pastIncomplete.clockOut = autoCheckoutTime;
+    pastIncomplete.totalHours = totalHours;
+    const retroNote = `System auto-closed incomplete previous day session at 7:00 PM IST`;
+    pastIncomplete.notes = pastIncomplete.notes ? `${pastIncomplete.notes} | ${retroNote}` : retroNote;
+
+    if (!pastIncomplete.timeline) pastIncomplete.timeline = [];
+    const hasForceCheckout = pastIncomplete.timeline.some(t => t.type === 'FORCE_CHECKOUT');
+    if (!hasForceCheckout) {
+      pastIncomplete.timeline.push({
+        type: 'FORCE_CHECKOUT',
+        timestamp: autoCheckoutTime,
+        workLocation: pastIncomplete.workLocation || 'IN_OFFICE',
+        note: retroNote
+      });
+    }
+    pastIncomplete.markModified('timeline');
+    await pastIncomplete.save();
+    console.log(`🔧 [Strict Attendance] Auto-closed past day attendance for user ${userId}`);
+  }
+
+  // 2. Query strictly today's attendance record in IST
+  const todayAttendance = await Attendance.findOne({
+    user: userId,
+    $or: [
+      { date: { $gte: start, $lte: end } },
+      { clockIn: { $gte: start, $lte: end } }
+    ]
+  }).sort({ date: -1, createdAt: -1 });
+
+  return todayAttendance || null;
 };
 
 // Clock In
@@ -131,23 +192,15 @@ export const clockIn = asyncHandler(async (req, res, next) => {
     return next(new AppError(faceVerification.message, 400));
   }
 
-  // 1. Find user's latest attendance document
-  let existingAttendance = await Attendance.findOne({
-    user: userId
-  }).sort({ date: -1, createdAt: -1 });
-
-  // 2. Check if the latest attendance document belongs to today in IST
-  const isTodayDoc = existingAttendance && (
-    isTodayInIST(existingAttendance.date) ||
-    isTodayInIST(existingAttendance.clockIn)
-  );
+  // Find strictly today's attendance (and clean up any past incomplete session)
+  let existingAttendance = await getStrictTodayAttendance(userId);
 
   const now = new Date();
   const { hours, minutes, isSunday } = getISTTime(now);
   const isLate = hours >= 9 && (hours > 9 || minutes > 40);
   const attendanceStatus = isSunday ? 'OVER_DUTY' : (isLate ? 'LATE' : 'PRESENT');
 
-  if (isTodayDoc && existingAttendance) {
+  if (existingAttendance) {
     if (existingAttendance.clockOut) {
       const gapMs = now - new Date(existingAttendance.clockOut);
       existingAttendance.extraBreakMs = (existingAttendance.extraBreakMs || 0) + gapMs;
@@ -322,8 +375,7 @@ export const lunchOut = asyncHandler(async (req, res, next) => {
     return next(new AppError(faceVerification.message, 400));
   }
 
-  const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = await getStrictTodayAttendance(userId);
 
   if (!attendance) {
     return next(new AppError('No clock-in record found for today.', 404));
@@ -364,8 +416,7 @@ export const lunchIn = asyncHandler(async (req, res, next) => {
     return next(new AppError(faceVerification.message, 400));
   }
 
-  const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = await getStrictTodayAttendance(userId);
 
   if (!attendance) {
     return next(new AppError('No clock-in record found for today.', 404));
@@ -410,8 +461,7 @@ export const clockOut = asyncHandler(async (req, res, next) => {
     return next(new AppError(faceVerification.message, 400));
   }
 
-  const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  const attendance = await getStrictTodayAttendance(userId);
 
   if (!attendance) {
     return next(new AppError('No clock-in record found for today.', 404));
@@ -465,8 +515,11 @@ export const clockOut = asyncHandler(async (req, res, next) => {
 export const getTodayAttendance = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
 
-  const latest = await Attendance.findOne({ user: userId }).sort({ date: -1, createdAt: -1 });
-  const attendance = (latest && (!latest.clockOut || isTodayInIST(latest.date) || isTodayInIST(latest.clockIn))) ? latest : null;
+  // Auto-checkout check if current time is past 7:00 PM IST
+  await runAutoCheckoutJob();
+
+  // Strictly get today's attendance (and clean up any past incomplete session)
+  const attendance = await getStrictTodayAttendance(userId);
 
   if (attendance && attendance.clockIn && !attendance.clockOut && attendance.status === 'HALF_DAY') {
     const firstClockInIST = getISTTime(new Date(attendance.clockIn));
@@ -487,18 +540,22 @@ export const getAttendanceLogs = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const { month, year, status } = req.query;
 
-  const currentYear = Number(year) || new Date().getFullYear();
-  const currentMonth = Number(month) || new Date().getMonth() + 1;
+  let query = {};
 
-  // Build IST-aware month start and end dates
-  const monthStr = String(currentMonth).padStart(2, '0');
-  const lastDay = new Date(currentYear, currentMonth, 0).getDate();
-  const startDate = new Date(`${currentYear}-${monthStr}-01T00:00:00.000+05:30`);
-  const endDate = new Date(`${currentYear}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59.999+05:30`);
-
-  let query = {
-    date: { $gte: startDate, $lte: endDate }
-  };
+  if (month && year) {
+    const currentYear = Number(year);
+    const currentMonth = Number(month);
+    const monthStr = String(currentMonth).padStart(2, '0');
+    const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+    const startDate = new Date(`${currentYear}-${monthStr}-01T00:00:00.000+05:30`);
+    const endDate = new Date(`${currentYear}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59.999+05:30`);
+    query.date = { $gte: startDate, $lte: endDate };
+  } else {
+    // Preserve full 90-day attendance history so previous months (Last Month / Past Months) are preserved when month is omitted
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    query.date = { $gte: ninetyDaysAgo };
+  }
 
   if (status) {
     if (status === 'WFH') {
@@ -621,8 +678,7 @@ export const getLiveStatus = asyncHandler(async (req, res, next) => {
                   {
                     $or: [
                       { $and: [{ $gte: ['$date', todayStart] }, { $lte: ['$date', todayEnd] }] },
-                      { $eq: ['$clockOut', null] },
-                      { $eq: ['$clockOut', '$$REMOVE'] }
+                      { $and: [{ $gte: ['$clockIn', todayStart] }, { $lte: ['$clockIn', todayEnd] }] }
                     ]
                   }
                 ]

@@ -102,7 +102,7 @@ const HexagonDepartmentCard = ({ dept, index, onDelete }) => {
 
   const deptName = dept.name || preset?.name || 'Department';
   const deptCode = dept.code || preset?.code || 'DEPT';
-  const descriptionText = dept.description || preset?.description || 'Enterprise department unit structure';
+  const descriptionText = dept.description || preset?.description || '';
   const displayEmployeeCount = (typeof dept.employeeCount === 'number')
     ? dept.employeeCount
     : (preset?.defaultCount ?? 0);
@@ -320,7 +320,7 @@ export const Departments = () => {
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 py-2">
           {departments.map((dept, index) => (
             <HexagonDepartmentCard
               key={dept._id || index}

@@ -305,6 +305,7 @@ export const FaceCameraModal = ({
 
   const handleConfirm = () => {
     if (computedDescriptor && onCaptureSuccess) {
+      cleanup();
       onCaptureSuccess(computedDescriptor);
     }
   };

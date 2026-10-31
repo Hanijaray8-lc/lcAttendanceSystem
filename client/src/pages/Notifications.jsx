@@ -114,17 +114,26 @@ export const Notifications = () => {
     setPushMessage("🚀 Test Notification Triggered! Check your device popups & list.");
     setTimeout(() => setPushMessage(''), 5000);
 
-    // Insert an immediate test notification item for instant visual feedback
-    const testItem = {
-      _id: 'test-' + Date.now(),
-      title: "🚀 Test Notification",
-      message: "Push & In-App notifications are working properly on your device!",
-      type: 'SYSTEM',
-      isRead: true,
-      createdAt: new Date().toISOString()
-    };
-    setNotifications(prev => [testItem, ...prev]);
-    setTotal(prev => prev + 1);
+    try {
+      // Save test notification persistently into MongoDB database
+      const res = await api.post('/notifications/test');
+      if (res.data?.data?.notification) {
+        setNotifications(prev => [res.data.data.notification, ...prev.filter(n => n._id !== res.data.data.notification._id)]);
+        setTotal(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error('Failed to save test notification in database:', err);
+      const testItem = {
+        _id: 'test-' + Date.now(),
+        title: "🚀 Test Notification",
+        message: "Push & In-App notifications are working properly on your device!",
+        type: 'SYSTEM',
+        isRead: true,
+        createdAt: new Date().toISOString()
+      };
+      setNotifications(prev => [testItem, ...prev]);
+      setTotal(prev => prev + 1);
+    }
 
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
@@ -158,10 +167,18 @@ export const Notifications = () => {
 
   const handleDeleteNotification = async (id) => {
     if (!window.confirm("Are you sure you want to delete this notification?")) return;
+
+    // Handle local test notification items (id starting with 'test-') without making API call
+    if (typeof id === 'string' && id.startsWith('test-')) {
+      setNotifications(prev => prev.filter(n => n._id !== id));
+      setTotal(prev => Math.max(0, prev - 1));
+      return;
+    }
+
     try {
       await api.delete(`/notifications/${id}`);
       setNotifications(prev => prev.filter(n => n._id !== id));
-      setTotal(prev => prev - 1);
+      setTotal(prev => Math.max(0, prev - 1));
     } catch (err) {
       console.error(err);
       alert(`Failed to delete notification. Reason: ${err.response?.data?.message || err.message}`);
@@ -354,9 +371,19 @@ export const Notifications = () => {
             );
           })
         ) : (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center text-slate-400 font-medium border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-            <Bell className="w-8 h-8 mx-auto mb-2 opacity-50 text-indigo-500" />
-            <p className="text-sm font-bold text-slate-600 dark:text-slate-300">You have no notifications at this time.</p>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 text-center border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+            <Bell className="w-10 h-10 mx-auto text-indigo-500/70 animate-pulse" />
+            <div>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">You have no active notifications at this time.</p>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Click 'Test Alert' or button below to send a real test notification to your account.</p>
+            </div>
+            <button
+              onClick={handleTestNotification}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-105"
+            >
+              <BellRing className="w-4 h-4" />
+              <span>Send Test Notification</span>
+            </button>
           </div>
         )}
       </div>

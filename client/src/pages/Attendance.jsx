@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import UiverseDropdown from '../components/UiverseDropdown';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -134,12 +135,23 @@ const LIVE_CARD_PALETTES = [
 
 export const Attendance = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'live' ? 'live' : 'logs';
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [logs, setLogs] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('logs'); // 'logs' | 'live'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'logs' | 'live'
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl === 'live') {
+      setActiveTab('live');
+    } else if (tabFromUrl === 'logs') {
+      setActiveTab('logs');
+    }
+  }, [searchParams]);
   const [liveStatus, setLiveStatus] = useState([]);
   const [liveLoading, setLiveLoading] = useState(false);
   const [forceCheckoutUserId, setForceCheckoutUserId] = useState(null);
@@ -326,6 +338,17 @@ export const Attendance = () => {
     });
   };
 
+  const getFirstClockInTimestamp = (item) => {
+    if (!item) return null;
+    const logObj = item.attendance || item;
+    const timeline = getDetailLogTimeline(logObj);
+    const loginEvents = timeline.filter((e) => e.type === 'CLOCK_IN');
+    if (loginEvents.length > 0) {
+      return loginEvents[0].timestamp;
+    }
+    return item.firstClockInTime || logObj.clockIn || item.clockInTime || null;
+  };
+
   const getLatestClockInTimestamp = (item) => {
     if (!item) return null;
     const logObj = item.attendance || item;
@@ -340,6 +363,11 @@ export const Attendance = () => {
   const isLogActiveSession = (log) => {
     if (!log || !log.clockIn || log.isSyntheticAbsent || log.status === 'ABSENT' || log.status === 'WEEK_OFF') return false;
     
+    // An active session can ONLY be from today in IST
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    const logDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(log.clockIn || log.date));
+    if (todayStr !== logDateStr) return false;
+
     // If clockOut is missing or undefined, it is an active session!
     if (!log.clockOut) return true;
 
@@ -409,7 +437,7 @@ export const Attendance = () => {
 
   const formatClockTime = (timeStr) => {
     if (!timeStr) return '--';
-    return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return new Date(timeStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
   };
 
   const getLocalDateString = (dateVal) => {
@@ -995,7 +1023,10 @@ export const Attendance = () => {
             />
             
             <button
-              onClick={() => setActiveTab('logs')}
+              onClick={() => {
+                setActiveTab('logs');
+                setSearchParams({ tab: 'logs' });
+              }}
               className={`relative z-10 px-4 sm:px-6 py-1.5 sm:py-2 text-[11px] sm:text-xs font-black transition-colors duration-300 flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full ${
                 activeTab === 'logs' ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
@@ -1003,7 +1034,10 @@ export const Attendance = () => {
               📋 Attendance Logs
             </button>
             <button
-              onClick={() => setActiveTab('live')}
+              onClick={() => {
+                setActiveTab('live');
+                setSearchParams({ tab: 'live' });
+              }}
               className={`relative z-10 px-4 sm:px-6 py-1.5 sm:py-2 text-[11px] sm:text-xs font-black transition-colors duration-300 flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full ${
                 activeTab === 'live' ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
@@ -1035,13 +1069,13 @@ export const Attendance = () => {
 
               <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
                 {getLatestClockInTimestamp(todayAttendance)
-                  ? `Logged In at ${new Date(getLatestClockInTimestamp(todayAttendance)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  ? `Logged In at ${new Date(getLatestClockInTimestamp(todayAttendance)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}`
                   : 'Not Logged In Yet'}
               </h3>
 
               {todayAttendance?.clockOut && (
                 <p className="text-xs font-semibold text-emerald-500 mt-0.5 truncate">
-                  Logged Out at {new Date(todayAttendance.clockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({formatWorkDuration(todayAttendance)} worked)
+                  Logged Out at {new Date(todayAttendance.clockOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} ({formatWorkDuration(todayAttendance)} worked)
                 </p>
               )}
             </div>
@@ -1172,7 +1206,7 @@ export const Attendance = () => {
           ) : liveStatus.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-sm font-medium">No employee data found.</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {liveStatus.map((item, idx) => {
                 const emp = item.employee;
                 const palette = LIVE_CARD_PALETTES[idx % LIVE_CARD_PALETTES.length];
@@ -1261,7 +1295,7 @@ export const Attendance = () => {
                         <div className="min-w-0">
                           <span className="text-[9px] font-extrabold text-purple-600/80 dark:text-purple-300/80 uppercase tracking-wider block leading-none">Clock In</span>
                           <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate block mt-0.5">
-                            {displayClockIn ? new Date(displayClockIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase() : '—'}
+                            {displayClockIn ? new Date(displayClockIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase() : '—'}
                           </span>
                         </div>
                       </div>
@@ -1274,7 +1308,7 @@ export const Attendance = () => {
                         <div className="min-w-0">
                           <span className="text-[9px] font-extrabold text-orange-600/80 dark:text-orange-300/80 uppercase tracking-wider block leading-none">Clock Out</span>
                           <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate block mt-0.5">
-                            {item.clockOutTime ? new Date(item.clockOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase() : '—'}
+                            {item.clockOutTime ? new Date(item.clockOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase() : '—'}
                           </span>
                         </div>
                       </div>
@@ -1368,8 +1402,8 @@ export const Attendance = () => {
 
       {/* Filter Bar */}
       {user?.role !== 'EMPLOYEE' && (
-        <div className="glass-card p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs relative z-50">
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="glass-card p-3 sm:p-4 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs relative z-50">
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
             <Filter className="w-4 h-4 text-slate-400 shrink-0" />
             <div className="relative w-full max-w-[260px] sm:w-64">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1383,12 +1417,12 @@ export const Attendance = () => {
             </div>
           </div>
 
-          <div className="flex flex-row items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto mt-1 sm:mt-0">
-            <div className="hidden lg:block text-[11px] sm:text-xs font-extrabold text-slate-400 mr-2">
+          <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 w-full md:w-auto mt-1 md:mt-0">
+            <div className="hidden xl:block text-[11px] sm:text-xs font-extrabold text-slate-400 mr-2 shrink-0">
               Showing {filteredEmployeeGroupList.length} Card{filteredEmployeeGroupList.length !== 1 ? 's' : ''}
             </div>
             
-            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end shrink-0">
               <UiverseDropdown
                 options={[
                   { value: "", label: "All Statuses" },
@@ -1404,20 +1438,20 @@ export const Attendance = () => {
               />
 
               {user?.role !== 'EMPLOYEE' && (
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setIsReportModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-xs hover:scale-105 whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-xs hover:scale-105 whitespace-nowrap shrink-0"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
                   View Report
                 </button>
                 <button
                   onClick={handleDownloadExcel}
-                  className="flex items-center justify-center p-1.5 px-2.5 sm:px-3.5 sm:py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-xs hover:scale-105 whitespace-nowrap"
+                  className="flex items-center justify-center px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-xs hover:scale-105 whitespace-nowrap shrink-0"
                 >
                   <Download className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline ml-1.5">Download</span>
+                  <span className="inline ml-1.5">Download</span>
                 </button>
               </div>
             )}
@@ -1427,7 +1461,7 @@ export const Attendance = () => {
       )}
 
       {/* Grouped Employee Attendance Cards (Every Directory Employee Has A Card) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {loading ? (
           <div className="col-span-full glass-card p-8 text-center text-slate-400 font-medium rounded-2xl">Loading attendance logs...</div>
         ) : filteredEmployeeGroupList.length > 0 ? (
@@ -1757,7 +1791,7 @@ export const Attendance = () => {
                         {/* LOGIN / LOGOUT Column */}
                         <div className="flex flex-col font-extrabold text-left">
                           <span className={`text-xs sm:text-sm ${isPresent ? 'text-emerald-600 dark:text-emerald-400' : isLate ? 'text-amber-600 dark:text-amber-400' : log.clockIn ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 font-normal'}`}>
-                            {log.clockIn ? formatClockTime(getLatestClockInTimestamp(log) || log.clockIn) : '--'}
+                            {log.clockIn ? formatClockTime(getFirstClockInTimestamp(log) || log.clockIn) : '--'}
                           </span>
                           <span className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
                             {log.clockOut ? formatClockTime(log.clockOut) : '--'}

@@ -6,6 +6,7 @@ import { Holiday } from '../models/Holiday.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { Attendance } from '../models/Attendance.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { runAutoCheckoutJob } from '../services/autoCheckoutService.js';
 
 // Build real monthly leave trend for specified year
 const buildMonthlyTrend = async (matchQuery = {}, trendYear) => {
@@ -182,21 +183,43 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
       .limit(5);
   }
 
-  if (['ADMIN', 'CEO'].includes(role)) {
-    const [employeeDeptStats, leaveStats, leavesToday, monthlyTrend, recentActivities] = await Promise.all([
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  if (['ADMIN', 'CEO', 'HR'].includes(role)) {
+    // Get CEO user IDs and active workforce IDs
+    const [ceoUsers, validUsers, activeStaff] = await Promise.all([
+      User.find({ role: 'CEO' }).select('_id'),
+      User.find({ isDeleted: false }).select('_id'),
+      User.find({ isDeleted: false, status: 'ACTIVE', role: { $ne: 'CEO' } }).select('_id')
+    ]);
+    const ceoIds = ceoUsers.map((u) => u._id.toString());
+    const validUserIds = validUsers.map((u) => u._id);
+    const activeStaffIds = new Set(activeStaff.map((u) => u._id.toString()));
+
+    // Calculate today start and end in IST (Asia/Kolkata)
+    const nowIST = new Date();
+    const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(nowIST);
+    const todayStart = new Date(`${istDateStr}T00:00:00.000+05:30`);
+    const todayEnd = new Date(`${istDateStr}T23:59:59.999+05:30`);
+
+    // Ensure auto check-out runs before fetching stats if past checkout time
+    await runAutoCheckoutJob();
+
+    const [employeeDeptStats, leaveStats, leavesToday, monthlyTrend, recentActivities, todayAttDocs, pendingTodayCount] = await Promise.all([
       Promise.all([
-        User.countDocuments({ isDeleted: false, status: 'ACTIVE' }),
+        User.countDocuments({ isDeleted: false, status: 'ACTIVE', role: { $ne: 'CEO' } }),
         Department.countDocuments({ isDeleted: false }),
-        User.countDocuments({ role: 'TEAM_LEAD', isDeleted: false })
+        User.countDocuments({ role: 'TEAM_LEAD', isDeleted: false }),
+        User.countDocuments({ createdAt: { $gte: startOfMonth }, isDeleted: false, role: { $ne: 'CEO' } })
       ]),
       LeaveRequest.aggregate([
-        { $match: { isDeleted: false } },
+        { $match: { isDeleted: false, user: { $in: validUserIds } } },
         {
           $group: {
             _id: null,
             pending: {
               $sum: {
-                $cond: [{ $in: ['$status', ['PENDING', 'ESCALATED_TO_HR']] }, 1, 0]
+                $cond: [{ $in: ['$status', ['PENDING', 'ESCALATED_TO_HR', 'TEAM_LEAD_APPROVED']] }, 1, 0]
               }
             },
             approved: {
@@ -216,14 +239,72 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
         status: { $in: ['HR_APPROVED', 'ADMIN_APPROVED', 'CEO_APPROVED'] },
         fromDate: { $lte: today },
         toDate: { $gte: today },
-        isDeleted: false
+        isDeleted: false,
+        user: { $in: validUserIds }
       }).populate('user', 'firstName lastName employeeId department profileImage'),
       buildMonthlyTrend({}, trendYear),
-      fetchRecentActivities({}, 5)
+      fetchRecentActivities({}, 5),
+      Attendance.find({
+        user: { $in: Array.from(activeStaffIds) },
+        $or: [
+          { date: { $gte: todayStart, $lte: todayEnd } },
+          { clockIn: { $gte: todayStart, $lte: todayEnd } }
+        ]
+      }).select('user clockIn clockOut timeline date createdAt').sort({ date: -1, createdAt: -1 }),
+      LeaveRequest.countDocuments({
+        status: { $in: ['PENDING', 'ESCALATED_TO_HR', 'TEAM_LEAD_APPROVED'] },
+        createdAt: { $gte: today },
+        isDeleted: false,
+        user: { $in: validUserIds }
+      })
     ]);
 
-    const [totalEmployees, totalDepartments, totalManagers] = employeeDeptStats;
+    const [totalEmployees, totalDepartments, totalManagers, newEmployeesThisMonth] = employeeDeptStats;
     const leaveCounts = leaveStats[0] || { pending: 0, approved: 0, rejected: 0 };
+
+    // Group attendances by user to get the latest state for each employee today
+    const latestAttMap = new Map();
+    (todayAttDocs || []).forEach(att => {
+      const uId = att.user?.toString();
+      if (uId && !latestAttMap.has(uId)) {
+        latestAttMap.set(uId, att);
+      }
+    });
+
+    let activeLoggedInCount = 0;
+    const totalPresentCount = latestAttMap.size;
+
+    latestAttMap.forEach(att => {
+      let isActive = false;
+      if (Array.isArray(att.timeline) && att.timeline.length > 0) {
+        const lastTimeline = att.timeline[att.timeline.length - 1];
+        if (lastTimeline) {
+          if (['CLOCK_IN', 'LUNCH_IN'].includes(lastTimeline.type)) {
+            isActive = true;
+          } else if (['CLOCK_OUT', 'FORCE_CHECKOUT'].includes(lastTimeline.type)) {
+            isActive = false;
+          } else if (lastTimeline.type === 'LUNCH_OUT') {
+            isActive = false;
+          }
+        }
+      } else {
+        isActive = Boolean(att.clockIn && !att.clockOut);
+      }
+      if (isActive) {
+        activeLoggedInCount++;
+      }
+    });
+
+    const todayLoggedIn = activeLoggedInCount;
+    const empCount = totalEmployees || 1;
+    const leavePct = Math.min(100, Math.round((leavesToday.length / empCount) * 100));
+
+    const trends = {
+      totalEmployees: newEmployeesThisMonth > 0 ? `+${newEmployeesThisMonth} New This Month` : `Active Workforce`,
+      todayLoggedIn: `${activeLoggedInCount} Active Now • ${totalPresentCount} Present Today`,
+      pendingLeaves: leaveCounts.pending > 0 ? (pendingTodayCount > 0 ? `+${pendingTodayCount} New Today` : `${leaveCounts.pending} Pending Review`) : `All Caught Up`,
+      employeesOnLeaveToday: `${leavesToday.length} On Leave Today (${leavePct}%)`
+    };
 
     res.status(200).json({
       status: 'success',
@@ -231,38 +312,18 @@ export const getDashboardStats = asyncHandler(async (req, res, next) => {
         cards: {
           totalEmployees,
           totalDepartments,
+          todayLoggedIn,
+          activeLoggedIn: activeLoggedInCount,
+          totalPresentToday: totalPresentCount,
           totalManagers,
           pendingLeaves: leaveCounts.pending,
+          pendingHrApprovals: leaveCounts.pending,
           approvedLeaves: leaveCounts.approved,
           rejectedLeaves: leaveCounts.rejected,
-          employeesOnLeaveToday: leavesToday.length
+          employeesOnLeaveToday: leavesToday.length,
+          trends
         },
         leavesToday,
-        monthlyTrend,
-        recentActivities,
-        upcomingHolidays
-      }
-    });
-  } else if (role === 'HR') {
-    const [totalEmployees, pendingHrApprovals, holidayCount, newEmployees, recentRequests, monthlyTrend, recentActivities] = await Promise.all([
-      User.countDocuments({ isDeleted: false }),
-      LeaveRequest.countDocuments({ status: { $in: ['TEAM_LEAD_APPROVED', 'ESCALATED_TO_HR', 'PENDING'] }, isDeleted: false }),
-      Holiday.countDocuments({ isDeleted: false, status: 'ACTIVE' }),
-      User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, isDeleted: false }),
-      LeaveRequest.find({ isDeleted: false })
-        .populate('user', 'firstName lastName profileImage department')
-        .populate('leaveType', 'name colorBadge')
-        .sort({ createdAt: -1 })
-        .limit(5),
-      buildMonthlyTrend({}, trendYear),
-      fetchRecentActivities({}, 5)
-    ]);
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        cards: { totalEmployees, pendingHrApprovals, holidayCount, newEmployees },
-        recentRequests,
         monthlyTrend,
         recentActivities,
         upcomingHolidays

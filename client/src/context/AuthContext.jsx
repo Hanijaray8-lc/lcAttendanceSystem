@@ -5,8 +5,13 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('elms_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('elms_user');
+      return savedUser && savedUser !== 'undefined' ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      localStorage.removeItem('elms_user');
+      return null;
+    }
   });
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +24,6 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data.data.user);
           localStorage.setItem('elms_user', JSON.stringify(res.data.data.user));
         } catch (error) {
-          console.error('[Auth Check Error]', error);
           logout();
         }
       }
@@ -28,8 +32,15 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+  const login = async (email, password, faceDescriptor = null) => {
+    const payload = { email, password };
+    if (faceDescriptor) payload.faceDescriptor = faceDescriptor;
+    const res = await api.post('/auth/login', payload);
+
+    if (res.data?.status === 'face_verification_required' || res.data?.requireFace) {
+      return res.data;
+    }
+
     const { user, accessToken, refreshToken } = res.data.data;
     localStorage.setItem('elms_access_token', accessToken);
     localStorage.setItem('elms_refresh_token', refreshToken);
@@ -42,7 +53,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post('/auth/logout');
     } catch (error) {
-      console.error('[Logout API error]', error);
+      // Silently handle logout error
     } finally {
       localStorage.removeItem('elms_access_token');
       localStorage.removeItem('elms_refresh_token');

@@ -34,6 +34,18 @@ const leaveRequestSchema = new mongoose.Schema(
       enum: ['FIRST_HALF', 'SECOND_HALF', 'NONE'],
       default: 'NONE'
     },
+    isPermission: {
+      type: Boolean,
+      default: false
+    },
+    permissionHours: {
+      type: Number,
+      default: 0
+    },
+    permissionTimeSlot: {
+      type: String,
+      default: ''
+    },
     isEmergency: {
       type: Boolean,
       default: false,

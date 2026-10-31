@@ -14,10 +14,16 @@ export const LeaveDetailsModal = ({ isOpen, onClose, leave, currentUser, onAppro
   const isOwner = leave.user?._id?.toString() === currentUser?._id?.toString();
   const applicantRole = leave.user?.role || 'EMPLOYEE';
 
-  // Define approval chains based on applicant role
+  const mgrId = leave.user?.reportingManager?._id || leave.user?.reportingManager;
+  const isDirectManager = Boolean(
+    currentUser?._id && mgrId && (mgrId.toString() === currentUser._id.toString())
+  );
+  const managerRole = leave.user?.reportingManager?.role;
+  const isManagerDualRole = managerRole === 'HR' || (isDirectManager && currentUser?.role === 'HR');
+
+  // Define approval chains based on applicant role (Standard 3-Step Pipeline)
   const getApprovalChain = () => {
     if (applicantRole === 'EMPLOYEE') {
-      // Employee: TL -> HR -> Admin (Final — no CEO)
       return [
         { role: 'TEAM_LEAD', label: '1. TL Approval', statusKey: 'TEAM_LEAD_APPROVED' },
         { role: 'HR', label: '2. HR Approval', statusKey: 'HR_APPROVED' },
@@ -77,8 +83,15 @@ export const LeaveDetailsModal = ({ isOpen, onClose, leave, currentUser, onAppro
     !(applicantRole === 'EMPLOYEE' && leave.status === 'ADMIN_APPROVED');
 
   // Check if current user is allowed to approve/reject right now in the sequence
-  const isMyTurn = (currentUser?.role === currentTurnRole || currentUser?.role === 'CEO') && !isOwner && !isFinalApproved && !isRejectedOrCancelled;
-  const showReviewSection = isManagerOrHR && (!isOwner || currentUser?.role === 'CEO');
+  // - Step 1 (TL): Team Lead or Direct Reporting Manager (Jason) or CEO
+  // - Step 2 (HR): HR (Jason) or CEO
+  // - Step 3 (Admin): Admin or CEO only (Locked for Jason)
+  const isMyTurn = (
+    currentUser?.role === currentTurnRole ||
+    currentUser?.role === 'CEO' ||
+    (currentTurnRole === 'TEAM_LEAD' && isDirectManager)
+  ) && !isOwner && !isFinalApproved && !isRejectedOrCancelled;
+  const showReviewSection = (isManagerOrHR || isDirectManager) && (!isOwner || currentUser?.role === 'CEO');
   const isActionDisabled = actionLoading || !isMyTurn;
 
   const handleApproveAction = async () => {
@@ -124,7 +137,7 @@ export const LeaveDetailsModal = ({ isOpen, onClose, leave, currentUser, onAppro
           </div>
 
           <div className="shrink-0 flex items-center justify-between sm:justify-end border-t sm:border-t-0 pt-2.5 sm:pt-0 border-slate-200/60 dark:border-slate-700/60">
-            <StatusBadge status={leave.status} applicantRole={leave.user?.role} />
+            <StatusBadge status={leave.status} applicantRole={leave.user?.role} isDualRole={isManagerDualRole} />
           </div>
         </div>
 
@@ -143,7 +156,7 @@ export const LeaveDetailsModal = ({ isOpen, onClose, leave, currentUser, onAppro
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          <div className={`grid ${approvalChain.length === 2 ? 'grid-cols-2' : approvalChain.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'} gap-2 pt-1`}>
             {approvalChain.map((step, idx) => {
               const isDone = idx < currentStepIndex || isFinalApproved;
               const isCurrent = idx === currentStepIndex && !isFinalApproved && !isRejectedOrCancelled;
@@ -194,7 +207,9 @@ export const LeaveDetailsModal = ({ isOpen, onClose, leave, currentUser, onAppro
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Duration</p>
             <p className="text-xs font-bold text-primary mt-1">
-              {leave.daysCount} Day{leave.daysCount > 1 ? 's' : ''} {leave.isHalfDay ? `(${leave.halfDayType})` : ''}
+              {leave.isPermission
+                ? `${leave.permissionHours || 2} Hour${(leave.permissionHours || 2) > 1 ? 's' : ''} Permission${leave.permissionTimeSlot ? ` (${leave.permissionTimeSlot})` : ''}`
+                : `${leave.daysCount} Day${leave.daysCount > 1 ? 's' : ''} ${leave.isHalfDay ? `(${leave.halfDayType})` : ''}`}
             </p>
           </div>
 

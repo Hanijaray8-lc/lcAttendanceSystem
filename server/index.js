@@ -37,6 +37,7 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import dailyReportRoutes from './routes/dailyReportRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import { checkEmergencyEscalations } from './services/escalationService.js';
+import { runAutoCheckoutJob } from './services/autoCheckoutService.js';
 
 const app = express();
 
@@ -66,32 +67,49 @@ app.use(async (req, res, next) => {
 });
 
 // Essential Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
 
-// CORS — allow configured frontend URL + Vercel preview deployments + Local Network
+// CORS — allow configured frontend URL + Vercel preview deployments + Render deployments + Local Network
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.FRONTEND_URL,
+  'https://lms-nkhe.onrender.com',
   'https://employeelogin.lifechangersind.com',
   'https://lcattendancesystem.onrender.com',
   'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
   'http://localhost:4173',
-  'http://192.168.43.194:5173', // Local network access for mobile
-  'http://192.168.43.194:4173'
-];
+  'http://192.168.43.194:5173',
+  'http://192.168.43.194:4173',
+  'http://10.191.49.145:5173',
+  'http://10.191.49.145:5174',
+  'http://10.191.49.145:4173'
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
+      // Allow requests with no origin (mobile apps, curl, Postman, same-origin asset loads)
       if (!origin) return callback(null, true);
-      // Allow exact match or any Vercel preview subdomain
+
       const isAllowed =
         allowedOrigins.includes(origin) ||
-        /^https:\/\/.*\.vercel\.app$/.test(origin);
+        /\.onrender\.com$/.test(origin) ||
+        /\.vercel\.app$/.test(origin) ||
+        /localhost/.test(origin) ||
+        /127\.0\.0\.1/.test(origin);
+
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS: Origin '${origin}' not allowed.`));
+        // Never throw 500 error on CORS failure; just do not reflect the header
+        callback(null, false);
       }
     },
     credentials: true
@@ -206,7 +224,7 @@ app.get('*', (req, res) => {
 // Global Error Handler
 app.use(globalErrorHandler);
 
-// Emergency Leave Escalation Cron/Background Service (Checks every 5 minutes - optimized from 30s)
+// Emergency Leave Escalation & 7 PM Auto Check-Out Background Service
 const ESCALATION_INTERVAL = Number(process.env.ESCALATION_CHECK_INTERVAL_MS) || 300000; // Default: 5 minutes
 if (process.env.VERCEL !== '1') {
   setInterval(() => {
@@ -214,18 +232,12 @@ if (process.env.VERCEL !== '1') {
   }, ESCALATION_INTERVAL);
   console.log(`🚨 [Emergency Escalation] Active - checking every ${ESCALATION_INTERVAL / 1000}s`);
 
-  // Render Keep-Alive Service: Pings public URL every 10 minutes to prevent cold sleep
-  const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || 'https://lcattendancesystem.onrender.com';
-  setInterval(async () => {
-    try {
-      const res = await fetch(`${KEEP_ALIVE_URL}/api/health`);
-      if (res.ok) {
-        console.log(`[Keep-Alive] Ping sent to ${KEEP_ALIVE_URL}/api/health at ${new Date().toLocaleTimeString()}`);
-      }
-    } catch (err) {
-      console.warn(`[Keep-Alive Warning]`, err.message);
-    }
-  }, 10 * 60 * 1000); // Every 10 minutes
+  // 7:00 PM IST Auto Check-Out Background Service (Checks every 60 seconds)
+  setInterval(() => {
+    runAutoCheckoutJob();
+  }, 60000);
+  console.log(`⏰ [7:00 PM Auto Check-Out] Active - checking every 60s`);
+
 }
 
 const PORT = process.env.PORT || 5000;

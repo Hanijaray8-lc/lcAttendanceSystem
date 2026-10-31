@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { ASSETS } from '../assets';
+import { FaceCameraModal } from '../components/FaceCameraModal';
 import {
   Sparkles,
   ArrowRight,
@@ -33,6 +34,11 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // CEO Face ID Login Verification States
+  const [isFaceVerifyModalOpen, setIsFaceVerifyModalOpen] = useState(false);
+  const [faceVerifying, setFaceVerifying] = useState(false);
+  const [pendingCeoUser, setPendingCeoUser] = useState('');
 
   // In-Card Page Navigation State: 'front' | 'login' | 'forgot'
   const [cardPage, setCardPage] = useState('front');
@@ -77,7 +83,14 @@ export const Login = () => {
     setLoading(true);
 
     try {
-      await login(usernameInput, password);
+      const loginRes = await login(usernameInput, password);
+
+      if (loginRes?.requireFace || loginRes?.status === 'face_verification_required') {
+        setPendingCeoUser(loginRes?.data?.userName || usernameInput);
+        setIsFaceVerifyModalOpen(true);
+        setLoading(false);
+        return;
+      }
 
       if (rememberMe) {
         localStorage.setItem('lms_remembered_email', usernameInput);
@@ -91,6 +104,29 @@ export const Login = () => {
       setPassword('');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFaceVerifySuccess = async (capturedDescriptor) => {
+    const usernameInput = email.trim();
+    try {
+      setFaceVerifying(true);
+      setError('');
+      await login(usernameInput, password, capturedDescriptor);
+
+      if (rememberMe) {
+        localStorage.setItem('lms_remembered_email', usernameInput);
+      } else {
+        localStorage.removeItem('lms_remembered_email');
+      }
+
+      setIsFaceVerifyModalOpen(false);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Biometric verification failed. Face does not match registered CEO profile.');
+      setIsFaceVerifyModalOpen(false);
+    } finally {
+      setFaceVerifying(false);
     }
   };
 
@@ -722,6 +758,17 @@ export const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* CEO Biometric Face ID Verification Modal */}
+      <FaceCameraModal
+        isOpen={isFaceVerifyModalOpen}
+        onClose={() => setIsFaceVerifyModalOpen(false)}
+        mode="verify"
+        employeeName={pendingCeoUser || 'Executive CEO'}
+        employeeId="CEO Face ID Login"
+        onCaptureSuccess={handleFaceVerifySuccess}
+        isSubmitting={faceVerifying}
+      />
     </div>
   );
 };
