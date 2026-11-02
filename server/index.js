@@ -157,13 +157,26 @@ app.use(doubleCsrfProtection);
 */
 
 // Serve React Frontend (Static Files from client/dist)
+// Serve React Frontend only if the build exists
 import { existsSync } from 'fs';
+
 const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+
 if (existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
+  console.log('[Static] Frontend build found');
 } else {
-  console.warn('[Static] client/dist not found — run npm run build first');
+  console.warn('[Static] API-only mode — frontend hosted separately');
 }
+
+// Backend root health check
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'LC Attendance System API is running',
+    health: '/api/health'
+  });
+});
 
 // Health Check API
 app.get('/api/health', async (req, res) => {
@@ -210,16 +223,18 @@ app.use('/api/daily-reports', dailyReportRoutes);
 app.use('/api/settings', settingsRoutes);
 
 // React Router SPA - All non-API routes serve index.html
+// React Router fallback
 app.get('*', (req, res) => {
   const indexPath = path.join(clientDistPath, 'index.html');
+
   if (existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(503).json({
-      status: 'error',
-      message: 'Frontend not built. Run: npm run build'
-    });
+    return res.sendFile(indexPath);
   }
+
+  return res.status(404).json({
+    status: 'error',
+    message: 'API route not found'
+  });
 });
 
 // Global Error Handler
